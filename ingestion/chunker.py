@@ -3,12 +3,18 @@ import re
 from pathlib import Path
 
 def chunk_markdown(filepath: str, chunk_size: int = 400) -> list[dict]:
-    with open(filepath) as f:
-        post = frontmatter.load(f)
+    try:
+        with open(filepath) as f:
+            post = frontmatter.load(f)
+    except Exception as e:
+        print(f"[chunker] Skipping {filepath}: {e}")
+        return []
+
     text = post.content
     meta = dict(post.metadata)
     filename = Path(filepath).stem
     sections = re.split(r'\n(?=#{1,3} )', text)
+
     chunks = []
     for i, section in enumerate(sections):
         words = section.split()

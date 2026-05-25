@@ -4,8 +4,13 @@ from pathlib import Path
 from ingestion.ingest import ingest_file
 
 VAULT = Path("vault")
+SKIP_DIRS = {"_templates"}
+
 total = 0
-files = list(VAULT.rglob("*.md"))
+files = [
+    f for f in VAULT.rglob("*.md")
+    if not any(part in SKIP_DIRS for part in f.parts)
+]
 print(f"[ingest_all] Found {len(files)} markdown files")
 for md in files:
     total += ingest_file(str(md))
