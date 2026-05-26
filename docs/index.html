@@ -121,23 +121,27 @@
 
   .install-strip{
     display:flex;align-items:center;gap:.75rem;
-    background:var(--bg-elev);border:1px solid var(--border);
-    padding:.7rem 1rem;border-radius:8px;
-    font-family:'JetBrains Mono',monospace;font-size:.82rem;
-    margin-top:1.5rem;max-width:680px;
-    color:var(--text-2);overflow-x:auto;white-space:nowrap;
+    background:var(--bg-elev);border:1px solid var(--border-strong);
+    padding:.85rem 1.15rem;border-radius:10px;
+    font-family:'JetBrains Mono',monospace;font-size:.88rem;
+    margin-top:0;max-width:680px;
+    color:var(--text);overflow-x:auto;white-space:nowrap;
+    transition:border-color .15s;
   }
-  .install-hint{margin-top:.6rem;font-size:.78rem;color:var(--text-faint);max-width:680px}
+  .install-strip:hover{border-color:var(--text)}
+  #install-strip-hero{margin-top:2rem}
+  .install-hint{margin-top:1rem;font-size:.82rem;color:var(--text-faint);max-width:680px;line-height:1.55}
   .install-hint a{color:var(--text-dim);border-bottom:1px dashed var(--border-strong);text-decoration:none}
   .install-hint a:hover{color:var(--text);border-bottom-color:var(--text)}
+  .install-hint code{font-family:'JetBrains Mono',monospace;font-size:.85em;color:var(--text);background:var(--bg-elev);padding:.05em .35em;border-radius:3px;border:1px solid var(--border)}
   .install-strip .prompt{color:var(--text-faint);user-select:none}
   .install-strip .cmd{flex:1}
   .install-strip .copy{
-    background:transparent;border:1px solid var(--border-2);color:var(--text-dim);
-    font-family:inherit;font-size:.72rem;padding:.25rem .6rem;border-radius:4px;
-    cursor:pointer;transition:all .15s;
+    background:var(--text);color:var(--bg);border:1px solid var(--text);
+    font-family:inherit;font-size:.75rem;font-weight:600;padding:.35rem .85rem;border-radius:5px;
+    cursor:pointer;transition:opacity .15s;letter-spacing:.02em;
   }
-  .install-strip .copy:hover{border-color:var(--text);color:var(--text)}
+  .install-strip .copy:hover{opacity:.82}
 
   /* ── MARQUEE ─────────────────────────────────────────── */
   .marquee-band{
@@ -327,16 +331,18 @@
       auto-queries your project history before answering and auto-writes
       debug sessions after solving them. Nothing leaves your machine.
     </p>
-    <div class="hero-ctas">
-      <a id="download-btn" href="install/memcon-install.command" download class="btn primary">Download installer</a>
-      <a href="#install" class="btn ghost">or use a command →</a>
-    </div>
-    <div class="install-strip">
+    <div class="install-strip" id="install-strip-hero">
       <span class="prompt">$</span>
       <span class="cmd" id="install-cmd">curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash</span>
       <button class="copy" onclick="copyInstall()">copy</button>
     </div>
-    <div class="install-hint" id="install-hint">macOS / Linux — double-click to run · <a href="https://github.com/aryasgit/memcon/blob/main/bootstrap.sh" target="_blank">read the source</a></div>
+    <div class="hero-ctas">
+      <a id="download-btn" href="install/memcon-install-mac.zip" download class="btn ghost">Download installer (.zip)</a>
+      <a href="https://github.com/aryasgit/memcon" target="_blank" class="btn ghost">View source ↗</a>
+    </div>
+    <div class="install-hint" id="install-hint">
+      Paste the command above into Terminal — that's the canonical install path. The download is a fallback (unzip → right-click the <code>.command</code> → Open). <a href="https://github.com/aryasgit/memcon/blob/main/bootstrap.sh" target="_blank">Read the source.</a>
+    </div>
   </div>
 </section>
 
@@ -596,15 +602,18 @@
   }
   var OS = detectOS();
   var OS_CONFIG = {
-    mac:   { label:'Download installer (macOS)',   file:'install/memcon-install.command',
+    mac:   { label:'Download installer (.zip)',
+             file:'install/memcon-install-mac.zip',
              cmd:'curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash',
-             hint:'macOS — double-click the file to run' },
-    linux: { label:'Download installer (Linux)',   file:'install/memcon-install.command',
+             hint:'Paste the command above into Terminal — that\'s the canonical install path. The .zip is a fallback (unzip → right-click the <code>.command</code> → Open).' },
+    linux: { label:'Download installer (.zip)',
+             file:'install/memcon-install-mac.zip',
              cmd:'curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash',
-             hint:'Linux — `chmod +x memcon-install.command` then run it' },
-    win:   { label:'Download installer (Windows)', file:'install/memcon-install.bat',
+             hint:'Paste the command above into a terminal — that\'s the canonical install path. The .zip is a fallback (unzip → <code>chmod +x memcon-install.command</code> → run it).' },
+    win:   { label:'Download installer (.bat)',
+             file:'install/memcon-install.bat',
              cmd:'iwr -useb https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.ps1 | iex',
-             hint:'Windows — double-click the file to run' }
+             hint:'Paste the command above into PowerShell — that\'s the canonical install path. Or download the .bat and double-click (Windows may show a SmartScreen warning → More info → Run anyway).' }
   };
   (function(){
     var c = OS_CONFIG[OS];
@@ -618,8 +627,8 @@
     });
     var hint = document.getElementById('install-hint');
     if (hint){
-      hint.innerHTML = c.hint + ' · <a href="https://github.com/aryasgit/memcon/blob/main/' +
-        (OS === 'win' ? 'bootstrap.ps1' : 'bootstrap.sh') + '" target="_blank">read the source</a>';
+      hint.innerHTML = c.hint + ' <a href="https://github.com/aryasgit/memcon/blob/main/' +
+        (OS === 'win' ? 'bootstrap.ps1' : 'bootstrap.sh') + '" target="_blank">Read the source.</a>';
     }
   })();
 
