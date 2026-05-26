@@ -576,6 +576,19 @@ everywhere.
 
 ---
 
+## Roadmap
+
+Feature-keyed (not date-keyed). See **[ROADMAP.md](ROADMAP.md)** for the full plan:
+
+- **v1.0** *Plug into Claude* — ✅ shipped (MCP server, 9 tools, one-liner install)
+- **v2.0** *Memory absorbs everything* — ✅ shipped (code/PDF/git ingestion, CLI, multi-project, 12 tools)
+- **v3.0** *Lives in your editor* — 🚧 next (VS Code/Cursor extension with inline memory queries)
+- **v4.0** *Knows what it knows* — contradiction detection, knowledge graph viewer, pattern surfacing
+- **v5.0** *Multimodal & shared* — image/voice/web ingestion, team vaults
+- **v6.0+** *Managed option, niche depth* — hosted tier, ROS bags, plugin SDK
+
+---
+
 ## Origin
 
 Memcon was built as the memory system for **BARQ** — an autonomous 12-DOF
