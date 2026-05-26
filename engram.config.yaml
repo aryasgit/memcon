@@ -1,0 +1,46 @@
+project:
+  name: "BARQ"
+  description: "Autonomous quadruped robot"
+  domain: "robotics"
+
+vault:
+  path: "./vault"
+  skip_dirs: ["_templates"]
+  chunk_size: 400
+  min_chunk_length: 30
+
+memory:
+  collection: "engram_memory"
+  embedding_model: "all-MiniLM-L6-v2"
+  vector_dim: 384
+
+llm:
+  provider: "ollama"
+  model: "qwen2.5-coder:7b"
+  base_url: "http://localhost:11434/v1"
+  max_tokens: 1024
+
+qdrant:
+  host: "localhost"
+  port: 6333
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+
+subsystems:
+  - servo
+  - imu
+  - gait
+  - power
+  - vision
+  - voice
+  - slam
+  - ik
+  - version_control
+
+memory_types:
+  - episodic
+  - semantic
+  - procedural
+  - causal

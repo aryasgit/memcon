@@ -1,12 +1,16 @@
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sentence_transformers import SentenceTransformer
+from config import cfg
 
 _model = None
 
 def get_model():
     global _model
     if _model is None:
-        print("[embedder] Loading model...")
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        model_name = cfg('memory','embedding_model')
+        print(f"[embedder] Loading {model_name}...")
+        _model = SentenceTransformer(model_name)
         print("[embedder] Model ready.")
     return _model
 
