@@ -9,10 +9,12 @@ SKIP = set(cfg('vault','skip_dirs'))
 
 total = 0
 files = [
-    f for f in VAULT.rglob("*.md")
-    if not any(part in SKIP for part in f.parts)
+    f for f in VAULT.rglob("*")
+    if f.is_file()
+    and f.suffix.lower() in {".md", ".pdf"}
+    and not any(part in SKIP for part in f.parts)
 ]
-print(f"[ingest_all] Found {len(files)} markdown files")
-for md in files:
-    total += ingest_file(str(md))
+print(f"[ingest_all] Found {len(files)} files ({sum(1 for f in files if f.suffix.lower()=='.md')} md, {sum(1 for f in files if f.suffix.lower()=='.pdf')} pdf)")
+for f in files:
+    total += ingest_file(str(f))
 print(f"\n✅ Done. Total chunks ingested: {total}")

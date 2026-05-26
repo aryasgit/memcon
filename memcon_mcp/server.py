@@ -215,6 +215,151 @@ def memcon_subsystems() -> dict:
 
 
 @mcp.tool()
+def memcon_timeline(since_days: int = 7, limit: int = 30, subsystem: str | None = None) -> dict:
+    """
+    Time-bounded slice of project memory — what was written in the last
+    N days, newest first. Use this for "what did I work on this week?"
+    or "what changed in memory since Friday?" type questions.
+
+    Args:
+        since_days: Look back this many days from now. Default 7.
+        limit: Max number of notes to return. Default 30.
+        subsystem: Optional filter (e.g. "servo").
+
+    Returns: { "notes": [{path, name, folder, mtime_iso, age_days}, ...],
+               "since_days", "count" }
+    """
+    from pathlib import Path
+    from datetime import datetime, timedelta, timezone
+
+    vault = Path(cfg('vault', 'path'))
+    skip = set(cfg('vault', 'skip_dirs') or [])
+    cutoff = datetime.now(timezone.utc) - timedelta(days=since_days)
+
+    out = []
+    if vault.exists():
+        for p in vault.rglob("*.md"):
+            try:
+                rel = p.relative_to(vault)
+            except ValueError:
+                continue
+            if any(part in skip for part in rel.parts):
+                continue
+            try:
+                st = p.stat()
+            except OSError:
+                continue
+            mtime = datetime.fromtimestamp(st.st_mtime, tz=timezone.utc)
+            if mtime < cutoff:
+                continue
+
+            # Optional subsystem filter — read frontmatter
+            if subsystem:
+                try:
+                    import frontmatter
+                    with open(p) as f:
+                        meta = frontmatter.load(f).metadata
+                    if meta.get("subsystem") != subsystem:
+                        continue
+                except Exception:
+                    continue
+
+            age_secs = (datetime.now(timezone.utc) - mtime).total_seconds()
+            out.append({
+                "path": str(p.relative_to(vault.parent)),
+                "name": p.stem,
+                "folder": p.parent.name,
+                "mtime_iso": mtime.isoformat(),
+                "age_days": round(age_secs / 86400, 2),
+            })
+
+    out.sort(key=lambda n: n["mtime_iso"], reverse=True)
+    return {"notes": out[:limit], "since_days": since_days, "count": len(out)}
+
+
+@mcp.tool()
+def memcon_digest(since_days: int = 7) -> dict:
+    """
+    LLM-generated summary of what landed in memory over the last N days.
+    Reads the recent notes from the vault and asks the local LLM to
+    summarise themes, open items, and decisions. Use this for end-of-week
+    standups, project status, or "remind me what I've been doing".
+
+    Args:
+        since_days: Look back this many days. Default 7.
+
+    Returns: { "summary", "notes_considered", "since_days" }
+    """
+    from pathlib import Path
+    from datetime import datetime, timedelta, timezone
+    from openai import OpenAI
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    vault = Path(cfg('vault', 'path'))
+    skip = set(cfg('vault', 'skip_dirs') or [])
+    cutoff = datetime.now(timezone.utc) - timedelta(days=since_days)
+
+    recent = []
+    if vault.exists():
+        for p in vault.rglob("*.md"):
+            try:
+                rel = p.relative_to(vault)
+            except ValueError:
+                continue
+            if any(part in skip for part in rel.parts):
+                continue
+            try:
+                st = p.stat()
+            except OSError:
+                continue
+            if datetime.fromtimestamp(st.st_mtime, tz=timezone.utc) < cutoff:
+                continue
+            try:
+                text = p.read_text()[:3000]  # cap each note to keep prompt small
+            except Exception:
+                continue
+            recent.append((p.stem, p.parent.name, st.st_mtime, text))
+
+    if not recent:
+        return {"summary": f"No notes touched in the last {since_days} days.",
+                "notes_considered": 0, "since_days": since_days}
+
+    recent.sort(key=lambda r: r[2], reverse=True)
+    recent = recent[:25]  # cap input length
+    bundle = "\n\n---\n\n".join(
+        f"## {folder}/{name}\n{text}" for name, folder, _, text in recent
+    )
+
+    llm = OpenAI(
+        base_url=cfg('llm', 'base_url'),
+        api_key=os.getenv("LLM_API_KEY", "ollama"),
+    )
+    prompt = (
+        f"You are summarising an engineer's last {since_days} days of project memory.\n"
+        f"Read the notes below (each is a debug session, decision, experiment, or session summary)\n"
+        "and produce a concise digest with these sections:\n\n"
+        "**Themes** — what topics came up repeatedly\n"
+        "**Wins** — things that were fixed or decided\n"
+        "**Open items** — things still in progress, status=open\n"
+        "**Worth revisiting** — anything that might be worth following up\n\n"
+        "Use 2-4 bullet points per section. No padding. If a section is empty, omit it.\n\n"
+        f"NOTES:\n{bundle}\n\n"
+        "DIGEST:"
+    )
+    resp = llm.chat.completions.create(
+        model=cfg('llm', 'model'),
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=cfg('llm', 'max_tokens'),
+    )
+    return {
+        "summary": resp.choices[0].message.content,
+        "notes_considered": len(recent),
+        "since_days": since_days,
+    }
+
+
+@mcp.tool()
 def memcon_capture(text: str, hint: str = "auto") -> dict:
     """
     DEFAULT WRITE TOOL — use this for ANY user instruction of the form
