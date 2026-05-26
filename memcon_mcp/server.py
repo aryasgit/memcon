@@ -119,8 +119,11 @@ def memcon_write_debug(
     tags: list[str] | None = None,
 ) -> dict:
     """
-    Save a debugging session to memory. Call this after diagnosing or solving
-    a problem so the next session (yours or someone else's) can find it.
+    Save a debugging session with PRE-STRUCTURED fields. Use this only when
+    you already have title/symptom/etc. cleanly separated (e.g. from a form
+    or another tool). For natural-language user requests like "save this
+    debug session", prefer `memcon_capture` instead — it has the local LLM
+    do the field extraction for you.
 
     Args:
         title: Short descriptive title (e.g. "RR Wrist Overheating").
@@ -214,25 +217,48 @@ def memcon_subsystems() -> dict:
 @mcp.tool()
 def memcon_capture(text: str, hint: str = "auto") -> dict:
     """
-    One-shot natural-language save. Use this when the user says something
-    short like "save this debugging session" or "log my decision to use
-    Ollama" — instead of forcing them (or you) to fill in every structured
-    field. This tool calls the local LLM to extract title, symptom/cause/fix
-    (or decision/reasoning, or hypothesis/result/conclusion), subsystem, and
-    tags from the supplied text, then writes the structured note. Auto-links
-    to semantically related notes via Obsidian [[wikilinks]].
+    DEFAULT WRITE TOOL — use this for ANY user instruction of the form
+    "save this", "log this", "remember this", "save the debugging session",
+    "log my decision", etc. Do NOT ask the user to spell out title/symptom/
+    cause/fix yourself; instead, summarise the relevant span of the current
+    conversation into `text` and call this tool. The local LLM running
+    inside memcon will extract the structured fields itself.
 
-    Prefer the specific tools (memcon_write_debug / _decision / _experiment /
-    session_summary) only when you already have the fields cleanly separated.
+    Concretely, when the user says ONE of:
+      • "save this"  /  "save it"  /  "log this"
+      • "save the debugging session"  /  "log this debug"
+      • "save my decision (to use X)"  /  "log this decision"
+      • "remember this experiment"  /  "log the experiment"
+      • "session summary"  /  "save today's session"
+
+    → look back over the recent conversation, write a clear paragraph that
+       describes what happened (the problem, the cause if known, the fix if
+       known — or the decision and its reasoning, etc.), and pass that as
+       `text`. Always include enough detail that someone reading the saved
+       note cold would understand it.
+
+    Auto-routes to debug | decision | experiment | session_summary based on
+    content, unless `hint` forces a kind. Auto-links to the top-3
+    semantically related existing notes via Obsidian [[wikilinks]].
+
+    ONLY fall back to memcon_write_debug / _decision / _experiment /
+    session_summary when the user is explicitly giving you pre-structured
+    fields ("title: ..., symptom: ..., fix: ...").
 
     Args:
-        text: The full content to capture. Pass the conversation context or
-              a paragraph describing the work — the local LLM will structure
-              it. Don't pre-format; just dump.
-        hint: "auto" (default) lets the LLM pick the note type. Force it
-              with "debug" | "decision" | "experiment" | "session".
+        text: The content to capture. Pass a self-contained paragraph
+              summarising the conversation — NOT a one-word command. The
+              richer the text, the better the structured extraction.
+        hint: "auto" (default) lets the LLM pick. Force with
+              "debug" | "decision" | "experiment" | "session".
 
-    Returns: { "kind", "path", "extracted" }
+    Returns: { "status", "kind", "path", "extracted" }
+
+    Example invocation (after a debugging conversation):
+        memcon_capture(text="The RR servo overheated during backward gait.
+            Diagnosed as vibration-loosened wiring causing power brownouts
+            from servo current spikes. Fixed by re-seating the connectors
+            and bumping the bench PSU current limit from 3A to 5A.")
     """
     import json as _json
     import re as _re

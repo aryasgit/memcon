@@ -81,28 +81,44 @@ and per-client setup snippets.
 
 ## Install (the easy way)
 
-### One-liner — macOS / Linux / WSL
+### One-liner
+
+#### macOS / Linux / WSL (bash)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash
 ```
 
-Clones into `~/memcon`, installs deps, picks the right LLM for your RAM,
-pulls it via Ollama, starts Qdrant, ingests the starter vault, **and
+#### Windows (PowerShell)
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.ps1 | iex
+```
+
+Either one clones into `~/memcon`, installs deps, picks the right LLM for
+your RAM, pulls it via Ollama, starts Qdrant, ingests the starter vault, **and
 auto-registers Memcon in your Claude Desktop config** (preserves any
 existing MCP servers). Takes 5–10 minutes the first time.
 
-After it finishes, just `Cmd+Q` Claude Desktop and reopen — `memcon` is
+After it finishes, fully quit Claude Desktop and reopen — `memcon` is
 already wired in.
 
-Overrides:
+Overrides (set as env vars before the one-liner):
+
+| Var | What |
+|---|---|
+| `MEMCON_DIR` | Custom install path (default `~/memcon`) |
+| `MEMCON_MODEL` | Force a specific Ollama model (skips the RAM-auto-pick) |
+| `MEMCON_SKIP_MCP=1` | Skip Claude Desktop registration |
+| `MEMCON_REF` | Branch / tag (default `main`) |
+
+Example:
 ```bash
-# Custom install path
-MEMCON_DIR=/opt/memcon curl -fsSL ... | bash
-# Force a specific model
-MEMCON_MODEL=qwen2.5-coder:14b curl -fsSL ... | bash
-# Skip Claude Desktop registration
-MEMCON_SKIP_MCP=1 curl -fsSL ... | bash
+MEMCON_MODEL=qwen2.5-coder:14b curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash
+```
+
+```powershell
+$env:MEMCON_MODEL="qwen2.5-coder:14b"; iwr -useb https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.ps1 | iex
 ```
 
 ### No-Python mode — Docker only
