@@ -254,9 +254,9 @@
     margin:0 auto;max-width:none;
   }
   .quote h2 .pill{
-    font-family:'JetBrains Mono',monospace;font-weight:500;font-size:.5em;
-    background:var(--text);color:var(--bg);padding:.05em .25em;
-    vertical-align:.35em;line-height:1.1;display:inline-block;margin-left:.1em;
+    font-family:'JetBrains Mono',monospace;font-weight:500;font-size:.42em;
+    background:var(--text);color:var(--bg);padding:.18em .45em;
+    vertical-align:.55em;line-height:1.1;display:inline-block;margin-left:.4em;letter-spacing:.02em;
   }
 
   /* ── FINAL CTA ───────────────────────────────────────── */
@@ -475,23 +475,23 @@
       <h2 class="display">Five processes. <span class="subtle">All on your laptop.</span></h2>
     </div>
     <div class="arch reveal">
-<span class="c">                ┌─────────────────────────────────────┐</span>
-<span class="c">                │</span>     <span class="hl">Claude Desktop / Cursor / Code</span>    <span class="c">│</span>
-<span class="c">                └────────────────┬────────────────────┘</span>
-                                 │ <span class="hl">stdio (JSON-RPC)</span>
-<span class="c">                ┌────────────────▼────────────────────┐</span>
-<span class="c">                │</span>      <span class="accent">memcon_mcp/server.py</span>            <span class="c">│</span>
-<span class="c">                │</span>  9 tools · query · ask · write_*     <span class="c">│</span>
-<span class="c">                └─┬──────────────┬────────────────┬───┘</span>
-                  │              │                │
-<span class="c">     ┌────────────▼──┐  ┌────────▼──────┐  ┌──────▼─────┐</span>
-<span class="c">     │</span> <span class="hl">Qdrant</span>         <span class="c">│  │</span> <span class="hl">Ollama</span>          <span class="c">│  │</span> <span class="hl">Obsidian</span>   <span class="c">│</span>
-<span class="c">     │</span> :6333          <span class="c">│  │</span> :11434         <span class="c">│  │</span> vault/     <span class="c">│</span>
-<span class="c">     │</span> vectors        <span class="c">│  │</span> qwen2.5-coder  <span class="c">│  │</span> markdown   <span class="c">│</span>
-<span class="c">     └───────────────┘  └────────────────┘  └────┬───────┘</span>
-                                                  │ watcher.py
-                                                  ▼
-                                          re-ingest on save
+<span class="c">          ┌──────────────────────────────────────────────────┐</span>
+<span class="c">          │</span>      <span class="hl">Claude Desktop  ·  Cursor  ·  Code</span>          <span class="c">│</span>
+<span class="c">          └────────────────────────┬─────────────────────────┘</span>
+                                   │  <span class="hl">stdio (JSON-RPC)</span>
+<span class="c">          ┌────────────────────────▼─────────────────────────┐</span>
+<span class="c">          │</span>             <span class="accent">memcon_mcp/server.py</span>                 <span class="c">│</span>
+<span class="c">          │</span>      9 tools · query · ask · write_*             <span class="c">│</span>
+<span class="c">          └───────┬────────────────┬─────────────────┬───────┘</span>
+                  │                │                 │
+<span class="c">          ┌───────▼──────┐  ┌──────▼───────┐  ┌──────▼───────┐</span>
+<span class="c">          │</span>   <span class="hl">Qdrant</span>     <span class="c">│  │</span>   <span class="hl">Ollama</span>     <span class="c">│  │</span>  <span class="hl">Obsidian</span>    <span class="c">│</span>
+<span class="c">          │</span>   :6333      <span class="c">│  │</span>   :11434     <span class="c">│  │</span>  vault/      <span class="c">│</span>
+<span class="c">          │</span>   vectors    <span class="c">│  │</span>   qwen-cdr   <span class="c">│  │</span>  markdown    <span class="c">│</span>
+<span class="c">          └──────────────┘  └──────────────┘  └──────┬───────┘</span>
+                                                     │  watcher.py
+                                                     ▼
+                                              re-ingest on save
     </div>
   </div>
 </section>
@@ -530,7 +530,7 @@
   <div class="container">
     <h2 class="display">
       Built for engineers<br>
-      who build<span class="pill">hard things</span>
+      who build <span class="pill">hard&nbsp;things</span>
     </h2>
   </div>
 </section>
