@@ -1,0 +1,153 @@
+{
+  "name": "memcon-vscode",
+  "displayName": "Memcon",
+  "description": "Local memory layer for Claude — ask questions, save context, and browse project memory inline in VS Code or Cursor.",
+  "version": "0.1.0",
+  "publisher": "aryasgit",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "AI",
+    "Machine Learning",
+    "Notebooks"
+  ],
+  "keywords": [
+    "memcon",
+    "memory",
+    "claude",
+    "mcp",
+    "rag",
+    "local-first",
+    "ollama",
+    "qdrant"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aryasgit/memcon.git",
+    "directory": "vscode"
+  },
+  "homepage": "https://github.com/aryasgit/memcon",
+  "bugs": {
+    "url": "https://github.com/aryasgit/memcon/issues"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "memcon.ask",
+        "title": "Memcon: Ask",
+        "category": "Memcon"
+      },
+      {
+        "command": "memcon.saveSelection",
+        "title": "Memcon: Save selection to memory",
+        "category": "Memcon"
+      },
+      {
+        "command": "memcon.openDashboard",
+        "title": "Memcon: Open dashboard",
+        "category": "Memcon"
+      },
+      {
+        "command": "memcon.refreshRecent",
+        "title": "Memcon: Refresh recent",
+        "category": "Memcon",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "memcon.search",
+        "title": "Memcon: Search (raw chunks)",
+        "category": "Memcon"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "memcon.ask",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
+        "when": "editorFocus || focusedView == memconRecent"
+      },
+      {
+        "command": "memcon.saveSelection",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "editorHasSelection"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "memcon.saveSelection",
+          "when": "editorHasSelection",
+          "group": "memcon@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "memcon.refreshRecent",
+          "when": "view == memconRecent",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "memcon",
+          "title": "Memcon",
+          "icon": "media/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "memcon": [
+        {
+          "id": "memconRecent",
+          "name": "Recent",
+          "type": "tree"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Memcon",
+      "properties": {
+        "memcon.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "Base URL of the local Memcon API."
+        },
+        "memcon.topK": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 25,
+          "description": "How many chunks to retrieve per query."
+        },
+        "memcon.recentLimit": {
+          "type": "number",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "How many recent notes to show in the sidebar."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -254,6 +254,37 @@ Memcon can ingest much more than hand-written markdown notes:
 | **Git commits** | `./scripts/install_git_hook.sh [/path/to/repo]` installs a post-commit hook that ingests each commit automatically | `subsystem=version_control`, `memory_type=episodic` |
 | **MCP writes** | `memcon_capture` / `memcon_write_*` from Claude — auto-extracted and structured | per-tool defaults |
 
+## In your editor — VS Code & Cursor
+
+Memcon ships with an extension that works in **both** VS Code and Cursor
+(Cursor reads VS Code extensions natively).
+
+| Command | Default shortcut | What |
+|---|---|---|
+| `Memcon: Ask` | `Cmd+Shift+M` / `Ctrl+Shift+M` | Grounded answer opens in a markdown tab |
+| `Memcon: Save selection to memory` | `Cmd+Shift+S` / `Ctrl+Shift+S` | Captures selection + file path + optional note |
+| `Memcon: Search` | — | Raw chunks for inspection |
+| `Memcon: Open dashboard` | — | Opens `localhost:8000/ui` |
+| Sidebar "Recent" tree | — | Activity-bar view of recent notes, click to peek |
+
+Install the pre-built VSIX:
+
+```bash
+# From a Memcon clone
+cd vscode
+npm install && npm run compile
+npx @vscode/vsce package --no-dependencies
+# → produces memcon-vscode-0.1.0.vsix
+```
+
+Then in VS Code / Cursor: `Cmd+Shift+P` → **Extensions: Install from VSIX…** → pick the file → reload window.
+
+A pre-built copy is also available from the landing page at `/install/memcon-vscode-0.1.0.vsix`.
+
+See [vscode/README.md](vscode/README.md) for the full extension docs.
+
+---
+
 ## CLI
 
 `bin/memcon` is a one-binary CLI to the local API. Add `~/memcon/bin` to your

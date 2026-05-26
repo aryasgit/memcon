@@ -49,21 +49,27 @@ at [`v2.0.0`](https://github.com/aryasgit/memcon/releases/tag/v2.0.0).
 
 ---
 
-## v3.0 — *Lives in your editor* 🚧 **next**
+## v3.0 — *Lives in your editor* 🚧 **in progress**
 
 The moat feature. Once Memcon is inline in VS Code / Cursor, engineers don't
 context-switch to a browser to consult memory — they hover and it's there.
 
-- [ ] **VS Code extension** (`vscode/memcon`)
-  - [ ] Sidebar view: search across notes / code / commits / PDFs
-  - [ ] `Memcon: Ask` command (default `Cmd+Shift+M`) — grounded answer inline
-  - [ ] Code lens on functions/classes: "3 related debug sessions, 2 decisions"
-  - [ ] Right-click selection → **Save to Memcon** → `memcon_capture` is called
-        with the selection as context
-  - [ ] Hover provider: shows top-1 related note when you hover a symbol
-  - [ ] Status bar widget: "last memcon write: 12 min ago"
-  - [ ] Published to VS Code Marketplace + Open VSX (free, MIT)
-- [ ] **Cursor compatibility** — same VSIX, verified working in Cursor
+**MVP (`vscode/` folder, `memcon-vscode-0.1.0.vsix`) — ✅ shipped:**
+- [x] `Memcon: Ask` command (`Cmd+Shift+M`) — grounded answer in a markdown tab
+- [x] `Memcon: Save selection to memory` (`Cmd+Shift+S`) — captures selection
+      + file path + optional note
+- [x] `Memcon: Search` — raw chunks for inspection
+- [x] Sidebar "Recent" tree in the activity bar, with refresh + click-to-peek
+- [x] First-launch welcome + dashboard shortcut
+- [x] Same VSIX works in both VS Code and Cursor
+- [x] Distributed as a download from the landing page (`docs/install/`)
+
+**Still to land (`vscode/` 0.2.x):**
+- [ ] Code lens on functions/classes: "3 related debug sessions, 2 decisions"
+- [ ] Hover provider: shows top-1 related note when you hover a symbol
+- [ ] Status bar widget: "last memcon write: 12 min ago"
+- [ ] Direct `memcon_capture` integration (local-LLM extraction, not just session)
+- [ ] Published to VS Code Marketplace + Open VSX
 - [ ] **CLI in your `PATH`** — install.sh symlinks `bin/memcon` into
       `/usr/local/bin` (opt-in via `MEMCON_LINK_CLI=1`)
 - [ ] **Demo video** (30-second screencast of the inline editor loop) embedded
