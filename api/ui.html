@@ -18,6 +18,7 @@
   .search-bar{display:flex;gap:.5rem;margin-bottom:1rem}
   input[type=text]{flex:1;background:#111;border:1px solid #222;color:#e0e0e0;padding:.75rem 1rem;font-family:inherit;font-size:.9rem;outline:none;transition:border-color .2s}
   input[type=text]:focus{border-color:#00ff88}
+  input[type=text].hidden{display:none}
   button.go{background:#00ff88;color:#000;border:none;padding:.75rem 1.5rem;font-family:inherit;font-weight:700;cursor:pointer;font-size:.9rem}
   button.go:hover{background:#00cc6a}
   .filters{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center}
@@ -42,9 +43,19 @@
   .loading{color:#333;font-size:.85rem}
   .top-right{position:fixed;top:1.5rem;right:2rem;text-align:right;font-size:.7rem;color:#222}
   .top-right .project{color:#00ff88;font-size:.8rem}
+  /* Write panel */
+  .write-panel{display:none;margin-top:0}
+  .write-header{color:#00ff88;font-size:.7rem;letter-spacing:.1em;margin-bottom:1rem}
+  .write-types{display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap}
+  .wfield{width:100%;background:#111;border:1px solid #222;color:#e0e0e0;padding:.65rem;font-family:'IBM Plex Mono',monospace;font-size:.83rem;margin-bottom:.5rem;outline:none;transition:border-color .2s}
+  .wfield:focus{border-color:#00ff88}
+  textarea.wfield{resize:vertical;min-height:70px}
+  select.wfield{cursor:pointer}
+  .write-result{margin-top:.75rem;font-size:.8rem;display:none;padding:.5rem;border-left:2px solid #00ff88}
 </style>
 </head>
 <body>
+
 <div class="top-right">
   <div class="project" id="project-name">engram</div>
   <div id="domain-label"></div>
@@ -61,138 +72,295 @@
 </div>
 
 <div class="mode-toggle">
-  <button class="mode-btn active" id="btn-ask" onclick="setMode('ask')">ASK</button>
-  <button class="mode-btn" id="btn-search" onclick="setMode('search')">SEARCH</button>
+  <button class="mode-btn active" id="btn-ask"    onclick="setMode('ask')">ASK</button>
+  <button class="mode-btn"        id="btn-search" onclick="setMode('search')">SEARCH</button>
+  <button class="mode-btn"        id="btn-write"  onclick="setMode('write')">WRITE</button>
 </div>
 
-<div class="search-bar">
+<!-- ASK / SEARCH bar -->
+<div class="search-bar" id="search-bar">
   <input type="text" id="query" placeholder="What caused the servo to overheat?"
-    onkeydown="if(event.key==='Enter')submit()"/>
-  <button class="go" onclick="submit()">→</button>
+    onkeydown="if(event.key==='Enter')doSubmit()"/>
+  <button class="go" onclick="doSubmit()">→</button>
 </div>
 
-<div class="filters">
+<!-- Subsystem filters -->
+<div class="filters" id="filters-row">
   <span class="filter-label">filter:</span>
   <button class="chip active" id="chip-all" onclick="setSubsystem(null,this)">all</button>
   <span id="subsystem-chips"></span>
 </div>
 
+<!-- Answer box (ASK mode) -->
 <div class="answer-box" id="answer-box">
   <div class="answer-label">// ANSWER</div>
   <div class="answer-text" id="answer-text"></div>
   <div class="answer-sources" id="answer-sources"></div>
 </div>
 
+<!-- Search results -->
 <div class="results" id="results"></div>
 
+<!-- WRITE panel -->
+<div class="write-panel" id="write-panel">
+  <div class="write-header">// WRITE MEMORY</div>
+  <div class="write-types">
+    <button class="mode-btn active" id="wt-debug"      onclick="setWriteType('debug')">DEBUG SESSION</button>
+    <button class="mode-btn"        id="wt-decision"   onclick="setWriteType('decision')">DECISION</button>
+    <button class="mode-btn"        id="wt-experiment" onclick="setWriteType('experiment')">EXPERIMENT</button>
+    <button class="mode-btn"        id="wt-session"    onclick="setWriteType('session')">SESSION SUMMARY</button>
+  </div>
+  <div id="write-form"></div>
+  <div class="write-result" id="write-result"></div>
+</div>
+
 <script>
-let mode='ask', activeSub=null;
+// ── STATE ────────────────────────────────────────────────
+var mode       = 'ask';
+var writeType  = 'debug';
+var activeSub  = null;
+var subsystems = [];
 
-async function init(){
-  // Load stats
-  try{
-    const st = await fetch('/stats').then(r=>r.json());
-    document.getElementById('s-chunks').textContent = st.total_chunks ?? '—';
-    document.getElementById('s-col').textContent = st.collection ?? '—';
-  }catch(e){ console.error('stats error',e); }
+// ── INIT ─────────────────────────────────────────────────
+async function init() {
+  try {
+    var st = await fetch('/stats').then(function(r){ return r.json(); });
+    document.getElementById('s-chunks').textContent = st.total_chunks != null ? st.total_chunks : '—';
+    document.getElementById('s-col').textContent    = st.collection  || '—';
+  } catch(e) {
+    console.error('stats failed', e);
+  }
 
-  // Load config + build chips
-  try{
-    const conf = await fetch('/config').then(r=>r.json());
-    document.getElementById('s-model').textContent = conf.llm_model ?? '—';
+  try {
+    var conf = await fetch('/config').then(function(r){ return r.json(); });
+    document.getElementById('s-model').textContent  = conf.llm_model || '—';
     document.getElementById('s-status').textContent = 'online';
-    document.getElementById('project-name').textContent = conf.project ?? 'engram';
-    document.getElementById('domain-label').textContent = conf.domain ?? '';
+    document.getElementById('project-name').textContent = conf.project || 'engram';
+    document.getElementById('domain-label').textContent = conf.domain  || '';
 
-    const chipsEl = document.getElementById('subsystem-chips');
+    subsystems = conf.subsystems || [];
+    var chipsEl = document.getElementById('subsystem-chips');
     chipsEl.innerHTML = '';
-    (conf.subsystems || []).forEach(function(s){
-      const b = document.createElement('button');
+    subsystems.forEach(function(s) {
+      var b = document.createElement('button');
       b.className = 'chip';
       b.textContent = s;
       b.addEventListener('click', function(){ setSubsystem(s, b); });
       chipsEl.appendChild(b);
     });
-  }catch(e){
-    console.error('config error', e);
+  } catch(e) {
+    console.error('config failed', e);
     document.getElementById('s-status').textContent = 'error';
   }
 }
 
-function setSubsystem(s, el){
+// ── MODE SWITCHING ────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  ['ask','search','write'].forEach(function(x){
+    document.getElementById('btn-'+x).classList.toggle('active', x===m);
+  });
+
+  var isWrite = m === 'write';
+  document.getElementById('search-bar').style.display  = isWrite ? 'none' : 'flex';
+  document.getElementById('filters-row').style.display = isWrite ? 'none' : 'flex';
+  document.getElementById('answer-box').style.display  = 'none';
+  document.getElementById('results').innerHTML         = '';
+  document.getElementById('write-panel').style.display = isWrite ? 'block' : 'none';
+  document.getElementById('write-result').style.display = 'none';
+
+  if (!isWrite) {
+    document.getElementById('query').placeholder =
+      m === 'ask' ? 'What caused the servo to overheat?' : 'servo overheating gait backward';
+  } else {
+    renderWriteForm();
+  }
+}
+
+// ── SUBSYSTEM FILTER ──────────────────────────────────────
+function setSubsystem(s, el) {
   activeSub = s;
   document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
   el.classList.add('active');
 }
 
-function setMode(m){
-  mode = m;
-  document.getElementById('btn-ask').classList.toggle('active', m==='ask');
-  document.getElementById('btn-search').classList.toggle('active', m==='search');
-  document.getElementById('answer-box').style.display = 'none';
-  document.getElementById('results').innerHTML = '';
-  document.getElementById('query').placeholder =
-    m==='ask' ? 'What caused the servo to overheat?' : 'servo overheating gait backward';
-}
+// ── ASK / SEARCH ──────────────────────────────────────────
+async function doSubmit() {
+  var q = document.getElementById('query').value.trim();
+  if (!q) return;
 
-async function submit(){
-  const q = document.getElementById('query').value.trim();
-  if(!q) return;
-  const resultsEl = document.getElementById('results');
-  const answerBox = document.getElementById('answer-box');
+  var resultsEl = document.getElementById('results');
+  var answerBox = document.getElementById('answer-box');
   resultsEl.innerHTML = '<div class="loading">searching memory...</div>';
   answerBox.style.display = 'none';
 
-  try{
-    if(mode==='ask'){
-      const r = await fetch('/ask',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({question:q, top_k:5, subsystem:activeSub})
+  try {
+    if (mode === 'ask') {
+      var r = await fetch('/ask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question: q, top_k: 5, subsystem: activeSub})
       });
-      const d = await r.json();
+      var d = await r.json();
       answerBox.style.display = 'block';
-      document.getElementById('answer-text').textContent = d.answer;
+      document.getElementById('answer-text').textContent    = d.answer;
       document.getElementById('answer-sources').textContent =
         'sources: ' + d.sources.join(', ') + '  ·  ' + d.chunks_used + ' chunks used';
       renderChunks(d.raw_chunks || []);
-    }else{
-      const r = await fetch('/query',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({query:q, top_k:10, subsystem:activeSub})
+    } else {
+      var r2 = await fetch('/query', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query: q, top_k: 10, subsystem: activeSub})
       });
-      const d = await r.json();
-      renderChunks(d.results);
+      var d2 = await r2.json();
+      renderChunks(d2.results);
     }
-  }catch(e){
+  } catch(e) {
     resultsEl.innerHTML = '<div class="empty">error: ' + e.message + '</div>';
   }
 
-  fetch('/stats').then(r=>r.json()).then(function(d){
+  fetch('/stats').then(function(r){ return r.json(); }).then(function(d){
     document.getElementById('s-chunks').textContent = d.total_chunks;
   }).catch(function(){});
 }
 
-function renderChunks(chunks){
-  const el = document.getElementById('results');
-  if(!chunks || !chunks.length){
+function renderChunks(chunks) {
+  var el = document.getElementById('results');
+  if (!chunks || !chunks.length) {
     el.innerHTML = '<div class="empty">no results found</div>';
     return;
   }
-  el.innerHTML = chunks.map(function(c){
+  el.innerHTML = chunks.map(function(c) {
     return '<div class="chunk">' +
       '<div class="chunk-meta">' +
-        '<span class="score">' + c.score + '</span>' +
-        '<span class="subsystem">' + c.subsystem + '</span>' +
-        '<span class="mtype">' + c.memory_type + '</span>' +
-        '<span class="docname">' + c.doc_name + '</span>' +
+        '<span class="score">'    + c.score       + '</span>' +
+        '<span class="subsystem">'+ c.subsystem   + '</span>' +
+        '<span class="mtype">'    + c.memory_type + '</span>' +
+        '<span class="docname">'  + c.doc_name    + '</span>' +
       '</div>' +
-      '<div class="chunk-text">' + c.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+      '<div class="chunk-text">' +
+        c.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+      '</div>' +
     '</div>';
   }).join('');
 }
 
+// ── WRITE MODE ────────────────────────────────────────────
+function setWriteType(t) {
+  writeType = t;
+  ['debug','decision','experiment','session'].forEach(function(x){
+    document.getElementById('wt-'+x).classList.toggle('active', x===t);
+  });
+  document.getElementById('write-result').style.display = 'none';
+  renderWriteForm();
+}
+
+function subSelect() {
+  var opts = subsystems.map(function(s){
+    return '<option value="'+s+'">'+s+'</option>';
+  }).join('');
+  return '<select class="wfield" id="w-sub"><option value="unknown">subsystem...</option>' + opts + '</select>';
+}
+
+function renderWriteForm() {
+  var f = document.getElementById('write-form');
+  var t = writeType;
+
+  if (t === 'debug') {
+    f.innerHTML =
+      '<input  class="wfield" id="w-title"   placeholder="Title (e.g. RR Wrist Overheating)"/>' +
+      '<textarea class="wfield" id="w-symptom" placeholder="Symptom — what happened?"></textarea>' +
+      '<textarea class="wfield" id="w-cause"   placeholder="Cause (optional)"></textarea>' +
+      '<textarea class="wfield" id="w-fix"     placeholder="Fix applied (optional)"></textarea>' +
+      subSelect() +
+      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
+
+  } else if (t === 'decision') {
+    f.innerHTML =
+      '<input  class="wfield" id="w-title"    placeholder="Decision title"/>' +
+      '<textarea class="wfield" id="w-decision" placeholder="What was decided?"></textarea>' +
+      '<textarea class="wfield" id="w-reason"   placeholder="Why? What trade-offs?"></textarea>' +
+      subSelect() +
+      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
+
+  } else if (t === 'experiment') {
+    f.innerHTML =
+      '<input  class="wfield" id="w-title"      placeholder="Experiment title"/>' +
+      '<textarea class="wfield" id="w-hypothesis" placeholder="Hypothesis"></textarea>' +
+      '<textarea class="wfield" id="w-result"     placeholder="Result"></textarea>' +
+      '<textarea class="wfield" id="w-conclusion" placeholder="Conclusion"></textarea>' +
+      subSelect() +
+      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
+
+  } else if (t === 'session') {
+    f.innerHTML =
+      '<textarea class="wfield" id="w-summary" style="min-height:120px" ' +
+        'placeholder="What did you work on today? What broke? What was fixed? What did you decide?"></textarea>' +
+      subSelect() +
+      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
+  }
+}
+
+function gv(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+async function submitWrite() {
+  var sub    = gv('w-sub') || 'unknown';
+  var resEl  = document.getElementById('write-result');
+  var t      = writeType;
+  var endpoint, body;
+
+  if (t === 'debug') {
+    endpoint = '/memory/debug';
+    body = { title: gv('w-title'), symptom: gv('w-symptom'),
+             cause: gv('w-cause'), fix: gv('w-fix'),
+             subsystem: sub, tags: [], status: 'open' };
+
+  } else if (t === 'decision') {
+    endpoint = '/memory/decision';
+    body = { title: gv('w-title'), decision: gv('w-decision'),
+             reasoning: gv('w-reason'), subsystem: sub, tags: [] };
+
+  } else if (t === 'experiment') {
+    endpoint = '/memory/experiment';
+    body = { title: gv('w-title'), hypothesis: gv('w-hypothesis'),
+             result: gv('w-result'), conclusion: gv('w-conclusion'),
+             subsystem: sub, tags: [] };
+
+  } else if (t === 'session') {
+    endpoint = '/memory/session';
+    body = { summary: gv('w-summary'), subsystem: sub };
+  }
+
+  resEl.style.display = 'block';
+  resEl.style.color   = '#555';
+  resEl.textContent   = 'saving...';
+
+  try {
+    var r = await fetch(endpoint, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    var d = await r.json();
+    resEl.style.color   = '#00ff88';
+    resEl.textContent   = '✅ saved → ' + d.path;
+
+    // refresh chunk count
+    fetch('/stats').then(function(r){ return r.json(); }).then(function(d){
+      document.getElementById('s-chunks').textContent = d.total_chunks;
+    }).catch(function(){});
+
+  } catch(e) {
+    resEl.style.color = '#ff4444';
+    resEl.textContent = 'error: ' + e.message;
+  }
+}
+
+// ── START ─────────────────────────────────────────────────
 init();
 </script>
 </body>
