@@ -1,6 +1,6 @@
 """
 memory/writer.py
-Engram writes and updates memory automatically.
+Memcon writes and updates memory automatically.
 - log_decision()   → creates a decisions/ note
 - log_debug()      → creates a debugging/ note
 - update_note()    → appends new findings to existing note

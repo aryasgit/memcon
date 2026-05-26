@@ -1,6 +1,6 @@
 @echo off
 echo ╔══════════════════════════════════════╗
-echo ║     ENGRAM — Windows Setup           ║
+echo ║     MEMCON — Windows Setup           ║
 echo ╚══════════════════════════════════════╝
 echo.
 
@@ -30,7 +30,11 @@ for /f "skip=1" %%i in ('wmic computersystem get TotalPhysicalMemory') do (
 :ram_done
 echo Detected RAM: %RAM_GB%GB
 
-IF %RAM_GB% GEQ 16 (
+IF %RAM_GB% GEQ 64 (
+  set MODEL=qwen2.5-coder:32b
+) ELSE IF %RAM_GB% GEQ 32 (
+  set MODEL=qwen2.5-coder:14b
+) ELSE IF %RAM_GB% GEQ 16 (
   set MODEL=qwen2.5-coder:7b
 ) ELSE IF %RAM_GB% GEQ 8 (
   set MODEL=qwen2.5-coder:3b

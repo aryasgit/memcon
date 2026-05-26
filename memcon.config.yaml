@@ -10,7 +10,7 @@ vault:
   min_chunk_length: 30
 
 memory:
-  collection: "engram_memory"
+  collection: "memcon_memory"
   embedding_model: "all-MiniLM-L6-v2"
   vector_dim: 384
 

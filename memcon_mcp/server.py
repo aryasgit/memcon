@@ -1,24 +1,24 @@
 """
-Engram MCP Server — exposes Engram memory as Model Context Protocol tools.
+Memcon MCP Server — exposes Memcon memory as Model Context Protocol tools.
 
 Lets Claude (Desktop, Cursor, Code) auto-query relevant past work before
 answering, and auto-write debug sessions / decisions / experiments after
-solving a problem. No HTTP, no manual notes — Engram becomes a persistent
+solving a problem. No HTTP, no manual notes — Memcon becomes a persistent
 backend brain for any LLM session.
 
 Run as stdio server (default for Claude Desktop / Cursor):
-    python3 -m engram_mcp.server
+    python3 -m memcon_mcp.server
 
 Tools exposed:
-    engram_query           — semantic search, returns relevant chunks
-    engram_ask             — LLM-grounded answer (uses Engram's local LLM)
-    engram_write_debug     — save a debugging session note
-    engram_write_decision  — save an engineering decision
-    engram_write_experiment — save an experiment result
-    engram_session_summary — save an end-of-session summary
-    engram_update_note     — append findings to an existing note
-    engram_stats           — chunk count, project info
-    engram_subsystems      — list configured subsystems
+    memcon_query           — semantic search, returns relevant chunks
+    memcon_ask             — LLM-grounded answer (uses Memcon's local LLM)
+    memcon_write_debug     — save a debugging session note
+    memcon_write_decision  — save an engineering decision
+    memcon_write_experiment — save an experiment result
+    memcon_session_summary — save an end-of-session summary
+    memcon_update_note     — append findings to an existing note
+    memcon_stats           — chunk count, project info
+    memcon_subsystems      — list configured subsystems
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -34,11 +34,11 @@ from memory.writer import (
 )
 from memory.qdrant_store import ensure_collection, get_stats
 
-mcp = FastMCP("engram")
+mcp = FastMCP("memcon")
 
 
 @mcp.tool()
-def engram_query(query: str, top_k: int = 5, subsystem: str | None = None) -> dict:
+def memcon_query(query: str, top_k: int = 5, subsystem: str | None = None) -> dict:
     """
     Semantic search across the project's memory. Use this BEFORE answering any
     question about the project — it returns only the chunks relevant to the
@@ -58,11 +58,11 @@ def engram_query(query: str, top_k: int = 5, subsystem: str | None = None) -> di
 
 
 @mcp.tool()
-def engram_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> dict:
+def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> dict:
     """
-    Ask Engram's local LLM a question grounded in the project's memory.
+    Ask Memcon's local LLM a question grounded in the project's memory.
     Use this when you want a self-contained answer with sources. Prefer
-    engram_query when you (the calling LLM) want raw context to reason over.
+    memcon_query when you (the calling LLM) want raw context to reason over.
 
     Args:
         question: The question to answer.
@@ -109,7 +109,7 @@ def engram_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
 
 
 @mcp.tool()
-def engram_write_debug(
+def memcon_write_debug(
     title: str,
     symptom: str,
     cause: str = "",
@@ -128,7 +128,7 @@ def engram_write_debug(
         cause: Root cause if known.
         fix: What resolved it (or current workaround).
         status: "open" | "fixed" | "investigating".
-        subsystem: One of the configured subsystems (engram_subsystems).
+        subsystem: One of the configured subsystems (memcon_subsystems).
         tags: Optional list of free-form tags.
     """
     path = log_debug(title, symptom, cause, fix, status, subsystem, tags or [])
@@ -136,7 +136,7 @@ def engram_write_debug(
 
 
 @mcp.tool()
-def engram_write_decision(
+def memcon_write_decision(
     title: str,
     decision: str,
     reasoning: str,
@@ -152,7 +152,7 @@ def engram_write_decision(
 
 
 @mcp.tool()
-def engram_write_experiment(
+def memcon_write_experiment(
     title: str,
     hypothesis: str,
     result: str,
@@ -168,7 +168,7 @@ def engram_write_experiment(
 
 
 @mcp.tool()
-def engram_session_summary(summary: str, subsystem: str = "unknown") -> dict:
+def memcon_session_summary(summary: str, subsystem: str = "unknown") -> dict:
     """
     Save an end-of-session summary capturing what was worked on, broken, fixed,
     or decided. Call this near the end of a working session.
@@ -178,18 +178,18 @@ def engram_session_summary(summary: str, subsystem: str = "unknown") -> dict:
 
 
 @mcp.tool()
-def engram_update_note(filepath: str, content: str) -> dict:
+def memcon_update_note(filepath: str, content: str) -> dict:
     """
     Append new findings to an existing note (e.g. when a previously-open debug
     session gets resolved). `filepath` is the path returned by an earlier
-    engram_write_* call, or a doc_name visible in engram_query results.
+    memcon_write_* call, or a doc_name visible in memcon_query results.
     """
     path = update_note(filepath, content)
     return {"status": "updated", "path": path}
 
 
 @mcp.tool()
-def engram_stats() -> dict:
+def memcon_stats() -> dict:
     """
     Project info — chunk count, collection name, project name. Cheap diagnostic.
     """
@@ -200,7 +200,7 @@ def engram_stats() -> dict:
 
 
 @mcp.tool()
-def engram_subsystems() -> dict:
+def memcon_subsystems() -> dict:
     """
     List the configured subsystems for this project. Use as a guide when
     deciding which `subsystem` value to pass to write/query tools.

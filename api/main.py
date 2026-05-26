@@ -16,7 +16,7 @@ load_dotenv()
 VAULT_ROOT = Path(cfg('vault', 'path')).resolve()
 SKIP_DIRS = set(cfg('vault', 'skip_dirs') or [])
 
-app = FastAPI(title="Engram API")
+app = FastAPI(title="Memcon API")
 llm = OpenAI(
     base_url=cfg('llm','base_url'),
     api_key=os.getenv("LLM_API_KEY", "ollama")

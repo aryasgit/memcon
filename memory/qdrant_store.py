@@ -8,8 +8,8 @@ from qdrant_client.models import (
 from config import cfg
 
 client = QdrantClient(
-    host=os.getenv('ENGRAM_QDRANT_HOST', cfg('qdrant','host')),
-    port=int(os.getenv('ENGRAM_QDRANT_PORT', cfg('qdrant','port'))),
+    host=os.getenv('MEMCON_QDRANT_HOST', cfg('qdrant','host')),
+    port=int(os.getenv('MEMCON_QDRANT_PORT', cfg('qdrant','port'))),
 )
 COLLECTION = cfg('memory','collection')
 DIM = cfg('memory','vector_dim')
