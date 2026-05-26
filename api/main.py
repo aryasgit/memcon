@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from memory.retrieve import query
+from memory.writer import log_decision, log_debug, log_experiment, update_note, summarise_session
 from ingestion.ingest import ingest_file
 from memory.qdrant_store import ensure_collection, get_stats
 from openai import OpenAI
@@ -21,6 +22,8 @@ llm = OpenAI(
 def startup():
     ensure_collection()
 
+# ── REQUEST MODELS ────────────────────────────────────────
+
 class QueryRequest(BaseModel):
     query: str
     top_k: int = 5
@@ -33,6 +36,40 @@ class AskRequest(BaseModel):
 
 class IngestRequest(BaseModel):
     filepath: str
+
+class DecisionRequest(BaseModel):
+    title: str
+    decision: str
+    reasoning: str
+    subsystem: str = "unknown"
+    tags: list = []
+
+class DebugRequest(BaseModel):
+    title: str
+    symptom: str
+    cause: str = ""
+    fix: str = ""
+    status: str = "open"
+    subsystem: str = "unknown"
+    tags: list = []
+
+class ExperimentRequest(BaseModel):
+    title: str
+    hypothesis: str
+    result: str
+    conclusion: str
+    subsystem: str = "unknown"
+    tags: list = []
+
+class UpdateRequest(BaseModel):
+    filepath: str
+    content: str
+
+class SessionRequest(BaseModel):
+    summary: str
+    subsystem: str = "unknown"
+
+# ── READ ENDPOINTS ────────────────────────────────────────
 
 @app.get("/ui", response_class=HTMLResponse)
 def ui():
@@ -67,7 +104,8 @@ def query_memory(req: QueryRequest):
 def ask(req: AskRequest):
     results = query(req.question, top_k=req.top_k, subsystem=req.subsystem)
     if not results:
-        return {"answer": "No relevant memory found.", "sources": [], "chunks_used": 0, "raw_chunks": []}
+        return {"answer": "No relevant memory found.", "sources": [],
+                "chunks_used": 0, "raw_chunks": []}
     context = "\n\n---\n\n".join([
         f"[{r['memory_type']} | {r['subsystem']} | score={r['score']}]\n{r['text']}"
         for r in results
@@ -93,6 +131,36 @@ ANSWER:"""
         "chunks_used": len(results),
         "raw_chunks": results,
     }
+
+# ── WRITE ENDPOINTS ───────────────────────────────────────
+
+@app.post("/memory/decision")
+def write_decision(req: DecisionRequest):
+    path = log_decision(req.title, req.decision, req.reasoning,
+                        req.subsystem, req.tags)
+    return {"status": "written", "path": path}
+
+@app.post("/memory/debug")
+def write_debug(req: DebugRequest):
+    path = log_debug(req.title, req.symptom, req.cause,
+                     req.fix, req.status, req.subsystem, req.tags)
+    return {"status": "written", "path": path}
+
+@app.post("/memory/experiment")
+def write_experiment(req: ExperimentRequest):
+    path = log_experiment(req.title, req.hypothesis, req.result,
+                          req.conclusion, req.subsystem, req.tags)
+    return {"status": "written", "path": path}
+
+@app.post("/memory/update")
+def write_update(req: UpdateRequest):
+    path = update_note(req.filepath, req.content)
+    return {"status": "updated", "path": path}
+
+@app.post("/memory/session")
+def write_session(req: SessionRequest):
+    path = summarise_session(req.summary, req.subsystem)
+    return {"status": "written", "path": path}
 
 @app.post("/ingest")
 def ingest(req: IngestRequest):

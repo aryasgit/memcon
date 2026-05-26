@@ -241,7 +241,7 @@ date: 2026-05-25
 ## Environment Variables (.env)
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...     ← Optional, only if swapping Ollama for Claude API
+ANTHROPIC_API_KEY=...     ← Optional, only if swapping Ollama for Claude API
 BARQ_REPO=/Users/barq/BARQ/src   ← Path to robot code repo for git ingestion
 QDRANT_HOST=localhost
 QDRANT_PORT=6333

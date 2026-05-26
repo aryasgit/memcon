@@ -157,6 +157,7 @@ sources: i2c_oserror, rr_wrist_overheating · 5 chunks used
 
 ## Quick Start
 
+##FOR MAC
 ### 1. Clone
 
 ```bash
@@ -201,6 +202,25 @@ Obsidian → Open folder as vault → select `engram/vault/`
 Every note you save is automatically ingested into memory.
 
 ---
+## FOR WINDOWS
+Windows does not run `.sh` scripts natively. Two options:
+
+### Option A — WSL (Recommended)
+1. Install WSL: open PowerShell as admin and run:
+   wsl --install
+2. Restart, open Ubuntu terminal
+3. Clone engram inside WSL:
+```bash
+   git clone https://github.com/aryasgit/engram.git
+   cd engram
+   ./install.sh
+```
+
+### Option B — Git Bash
+1. Install [Git for Windows](https://git-scm.com/download/win)
+2. Right-click the engram folder → "Git Bash Here"
+3. Run `./install.sh`
+> Docker Desktop for Windows must be installed and running in both cases.
 
 ## Manual Start (if you prefer)
 
