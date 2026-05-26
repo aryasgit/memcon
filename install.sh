@@ -122,6 +122,14 @@ fi
 echo "📥 Ingesting vault..."
 python3 scripts/ingest_all.py
 
+# ── REGISTER MCP IN CLAUDE DESKTOP ────────
+# Idempotent — preserves any other MCP servers already configured.
+# Set MEMCON_SKIP_MCP=1 to opt out.
+if [ -z "$MEMCON_SKIP_MCP" ]; then
+  echo ""
+  python3 scripts/register_mcp.py || echo "   (MCP registration is optional — Memcon still works standalone)"
+fi
+
 echo ""
 echo "╔══════════════════════════════════════╗"
 echo "║        ✅ Setup complete!            ║"

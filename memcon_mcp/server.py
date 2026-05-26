@@ -211,6 +211,135 @@ def memcon_subsystems() -> dict:
     }
 
 
+@mcp.tool()
+def memcon_capture(text: str, hint: str = "auto") -> dict:
+    """
+    One-shot natural-language save. Use this when the user says something
+    short like "save this debugging session" or "log my decision to use
+    Ollama" — instead of forcing them (or you) to fill in every structured
+    field. This tool calls the local LLM to extract title, symptom/cause/fix
+    (or decision/reasoning, or hypothesis/result/conclusion), subsystem, and
+    tags from the supplied text, then writes the structured note. Auto-links
+    to semantically related notes via Obsidian [[wikilinks]].
+
+    Prefer the specific tools (memcon_write_debug / _decision / _experiment /
+    session_summary) only when you already have the fields cleanly separated.
+
+    Args:
+        text: The full content to capture. Pass the conversation context or
+              a paragraph describing the work — the local LLM will structure
+              it. Don't pre-format; just dump.
+        hint: "auto" (default) lets the LLM pick the note type. Force it
+              with "debug" | "decision" | "experiment" | "session".
+
+    Returns: { "kind", "path", "extracted" }
+    """
+    import json as _json
+    import re as _re
+    from openai import OpenAI
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    llm = OpenAI(
+        base_url=cfg('llm', 'base_url'),
+        api_key=os.getenv("LLM_API_KEY", "ollama"),
+    )
+
+    subs = cfg('subsystems')
+    sub_list = ", ".join(subs)
+    type_hint = "" if hint == "auto" else f"\nThe user explicitly tagged this as kind=\"{hint}\". Use that kind."
+
+    prompt = f"""You are a structuring assistant. Read the input below and emit a single JSON object that fits one of these schemas. Pick the kind that fits best.{type_hint}
+
+KIND = "debug":
+  {{"kind":"debug","title":"...","symptom":"...","cause":"...","fix":"...","status":"open|fixed|investigating","subsystem":"<one of: {sub_list}>","tags":["..."]}}
+
+KIND = "decision":
+  {{"kind":"decision","title":"...","decision":"...","reasoning":"...","subsystem":"<one of: {sub_list}>","tags":["..."]}}
+
+KIND = "experiment":
+  {{"kind":"experiment","title":"...","hypothesis":"...","result":"...","conclusion":"...","subsystem":"<one of: {sub_list}>","tags":["..."]}}
+
+KIND = "session":
+  {{"kind":"session","summary":"...","subsystem":"<one of: {sub_list}>"}}
+
+Rules:
+- Title: <= 60 chars, descriptive, no quotes.
+- subsystem MUST be one of the listed values, else "unknown".
+- tags: 2-5 lowercase kebab-case terms, no #.
+- If a field is genuinely unknown, use an empty string "" (not null).
+- Output ONLY the JSON object. No markdown fences, no commentary, no leading text.
+
+INPUT:
+{text}
+
+JSON:"""
+
+    try:
+        resp = llm.chat.completions.create(
+            model=cfg('llm', 'model'),
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=cfg('llm', 'max_tokens'),
+            temperature=0.1,
+        )
+        raw = resp.choices[0].message.content.strip()
+    except Exception as e:
+        return {"error": f"LLM call failed: {e}", "fallback": "use memcon_write_debug/decision/experiment/session_summary directly"}
+
+    # Strip code fences if the model wrapped output anyway
+    raw = _re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=_re.IGNORECASE | _re.MULTILINE).strip()
+    # Grab the first {...} block to be defensive
+    m = _re.search(r"\{.*\}", raw, _re.DOTALL)
+    if not m:
+        return {"error": "LLM did not return JSON", "raw_response": raw[:400]}
+    try:
+        data = _json.loads(m.group(0))
+    except _json.JSONDecodeError as e:
+        return {"error": f"could not parse JSON: {e}", "raw_response": raw[:400]}
+
+    kind = (data.get("kind") or hint or "debug").lower()
+    subsystem = data.get("subsystem") or "unknown"
+    if subsystem not in subs:
+        subsystem = "unknown"
+    tags = data.get("tags") or []
+
+    if kind == "decision":
+        path = log_decision(
+            title=data.get("title", "(untitled decision)"),
+            decision=data.get("decision", ""),
+            reasoning=data.get("reasoning", ""),
+            subsystem=subsystem,
+            tags=tags,
+        )
+    elif kind == "experiment":
+        path = log_experiment(
+            title=data.get("title", "(untitled experiment)"),
+            hypothesis=data.get("hypothesis", ""),
+            result=data.get("result", ""),
+            conclusion=data.get("conclusion", ""),
+            subsystem=subsystem,
+            tags=tags,
+        )
+    elif kind == "session":
+        path = summarise_session(
+            summary=data.get("summary", text),
+            subsystem=subsystem,
+        )
+    else:  # debug (default)
+        kind = "debug"
+        path = log_debug(
+            title=data.get("title", "(untitled debug session)"),
+            symptom=data.get("symptom", text[:200]),
+            cause=data.get("cause", ""),
+            fix=data.get("fix", ""),
+            status=data.get("status", "open"),
+            subsystem=subsystem,
+            tags=tags,
+        )
+
+    return {"status": "written", "kind": kind, "path": path, "extracted": data}
+
+
 def main() -> None:
     mcp.run()  # stdio transport by default
 
