@@ -72,11 +72,13 @@ echo "   Selected model: $SELECTED_MODEL ($MODEL_REASON)"
 echo ""
 
 # ── UPDATE CONFIG WITH SELECTED MODEL ────
+# Anchor on "^  model:" so we only touch llm.model and NOT memory.embedding_model
+# (the old unanchored pattern matched the substring inside `embedding_model: "..."`).
 if [ -f "memcon.config.yaml" ]; then
   if [ "$OS" = "Darwin" ]; then
-    sed -i '' "s|model: \".*\"|model: \"$SELECTED_MODEL\"|" memcon.config.yaml
+    sed -i '' "s|^  model: \".*\"|  model: \"$SELECTED_MODEL\"|" memcon.config.yaml
   else
-    sed -i "s|model: \".*\"|model: \"$SELECTED_MODEL\"|" memcon.config.yaml
+    sed -i "s|^  model: \".*\"|  model: \"$SELECTED_MODEL\"|" memcon.config.yaml
   fi
   echo "✅ Config updated with model: $SELECTED_MODEL"
 fi
