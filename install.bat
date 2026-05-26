@@ -43,14 +43,29 @@ IF %RAM_GB% GEQ 64 (
 )
 echo Selected model: %MODEL%
 
+REM Allow MEMCON_MODEL env var to override the auto-tier
+IF DEFINED MEMCON_MODEL (
+  set MODEL=%MEMCON_MODEL%
+  echo Overridden via MEMCON_MODEL env var: %MODEL%
+)
+
 REM Create venv
 python -m venv .venv
 call .venv\Scripts\activate.bat
 
-REM Install packages
-python -m pip install -q fastapi uvicorn qdrant-client sentence-transformers ^
-  watchdog anthropic python-frontmatter python-dotenv ^
-  gitpython rich openai pyyaml
+REM Install packages from requirements.txt (falls back to manual list)
+IF EXIST requirements.txt (
+  python -m pip install -q -r requirements.txt
+) ELSE (
+  python -m pip install -q fastapi uvicorn qdrant-client sentence-transformers ^
+    watchdog anthropic python-frontmatter python-dotenv ^
+    gitpython rich openai pyyaml mcp
+)
+
+REM Write selected model into memcon.config.yaml (anchored regex so we don't
+REM clobber embedding_model)
+python -c "import re,sys; p='memcon.config.yaml'; s=open(p).read(); s=re.sub(r'(?m)^  model: \".*\"', '  model: \"%MODEL%\"', s); open(p,'w').write(s)"
+echo Config updated with model: %MODEL%
 
 REM Pull model
 ollama pull %MODEL%
