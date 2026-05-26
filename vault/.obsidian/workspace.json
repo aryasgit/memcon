@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "_templates/barq_note.md",
+                "file": "debugging/rr_wrist_overheating.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "barq_note"
+              "title": "rr_wrist_overheating"
             }
           }
         ]
@@ -185,8 +185,8 @@
   },
   "active": "7077c8c80c52a23c",
   "lastOpenFiles": [
-    "debugging/i2c_oserror.md",
     "_templates/barq_note.md",
+    "debugging/i2c_oserror.md",
     "_templates"
   ]
 }

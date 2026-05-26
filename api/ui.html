@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engram</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Mono',monospace;background:#0a0a0a;color:#e0e0e0;min-height:100vh;padding:2rem}
+  h1{font-size:1.4rem;color:#00ff88;letter-spacing:.1em}
+  .subtitle{color:#444;font-size:.8rem;margin-bottom:2rem}
+  .stats-bar{display:flex;gap:2rem;margin-bottom:2rem;font-size:.75rem;color:#444;border-bottom:1px solid #1a1a1a;padding-bottom:1rem}
+  .stats-bar .val{color:#00ff88}
+  .mode-toggle{display:flex;gap:.5rem;margin-bottom:1rem}
+  .mode-btn{background:#111;border:1px solid #222;color:#555;padding:.4rem 1rem;font-family:inherit;font-size:.8rem;cursor:pointer;transition:all .2s}
+  .mode-btn.active{border-color:#00ff88;color:#00ff88}
+  .search-bar{display:flex;gap:.5rem;margin-bottom:1rem}
+  input[type=text]{flex:1;background:#111;border:1px solid #222;color:#e0e0e0;padding:.75rem 1rem;font-family:inherit;font-size:.9rem;outline:none;transition:border-color .2s}
+  input[type=text]:focus{border-color:#00ff88}
+  button.go{background:#00ff88;color:#000;border:none;padding:.75rem 1.5rem;font-family:inherit;font-weight:700;cursor:pointer;font-size:.9rem}
+  button.go:hover{background:#00cc6a}
+  .filters{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center}
+  .filter-label{color:#333;font-size:.7rem;margin-right:.25rem}
+  .chip{background:#111;border:1px solid #1e1e1e;color:#555;padding:.3rem .7rem;font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .2s}
+  .chip:hover{border-color:#333;color:#888}
+  .chip.active{border-color:#00ff88;color:#00ff88}
+  .answer-box{background:#0f1a14;border-left:3px solid #00ff88;padding:1.25rem;margin-bottom:1.5rem;display:none}
+  .answer-label{color:#00ff88;font-size:.7rem;letter-spacing:.1em;margin-bottom:.75rem}
+  .answer-text{line-height:1.7;font-size:.88rem;color:#ccc;white-space:pre-wrap}
+  .answer-sources{color:#333;font-size:.7rem;margin-top:.75rem;border-top:1px solid #1a1a1a;padding-top:.5rem}
+  .results{display:flex;flex-direction:column;gap:.6rem}
+  .chunk{background:#111;border:1px solid #1a1a1a;padding:1rem;transition:border-color .2s}
+  .chunk:hover{border-color:#2a2a2a}
+  .chunk-meta{display:flex;gap:1rem;margin-bottom:.6rem;font-size:.7rem;flex-wrap:wrap}
+  .score{color:#00ff88}
+  .subsystem{color:#888;background:#1a1a1a;padding:.1rem .4rem}
+  .mtype{color:#555}
+  .docname{color:#444}
+  .chunk-text{font-size:.83rem;line-height:1.6;color:#aaa}
+  .empty{color:#333;font-size:.85rem;padding:2rem 0}
+  .loading{color:#333;font-size:.85rem}
+  .top-right{position:fixed;top:1.5rem;right:2rem;text-align:right;font-size:.7rem;color:#222}
+  .top-right .project{color:#00ff88;font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="top-right">
+  <div class="project" id="project-name">engram</div>
+  <div id="domain-label"></div>
+</div>
+
+<h1>// ENGRAM</h1>
+<p class="subtitle">local engineering memory — your project never forgets</p>
+
+<div class="stats-bar">
+  <div><span>chunks </span><span class="val" id="s-chunks">—</span></div>
+  <div><span>collection </span><span class="val" id="s-col">—</span></div>
+  <div><span>model </span><span class="val" id="s-model">—</span></div>
+  <div><span>status </span><span class="val" id="s-status">loading</span></div>
+</div>
+
+<div class="mode-toggle">
+  <button class="mode-btn active" id="btn-ask" onclick="setMode('ask')">ASK</button>
+  <button class="mode-btn" id="btn-search" onclick="setMode('search')">SEARCH</button>
+</div>
+
+<div class="search-bar">
+  <input type="text" id="query" placeholder="What caused the servo to overheat?"
+    onkeydown="if(event.key==='Enter')submit()"/>
+  <button class="go" onclick="submit()">→</button>
+</div>
+
+<div class="filters">
+  <span class="filter-label">filter:</span>
+  <button class="chip active" id="chip-all" onclick="setSubsystem(null,this)">all</button>
+  <span id="subsystem-chips"></span>
+</div>
+
+<div class="answer-box" id="answer-box">
+  <div class="answer-label">// ANSWER</div>
+  <div class="answer-text" id="answer-text"></div>
+  <div class="answer-sources" id="answer-sources"></div>
+</div>
+
+<div class="results" id="results"></div>
+
+<script>
+let mode='ask', activeSub=null;
+
+async function init(){
+  // Load stats
+  try{
+    const st = await fetch('/stats').then(r=>r.json());
+    document.getElementById('s-chunks').textContent = st.total_chunks ?? '—';
+    document.getElementById('s-col').textContent = st.collection ?? '—';
+  }catch(e){ console.error('stats error',e); }
+
+  // Load config + build chips
+  try{
+    const conf = await fetch('/config').then(r=>r.json());
+    document.getElementById('s-model').textContent = conf.llm_model ?? '—';
+    document.getElementById('s-status').textContent = 'online';
+    document.getElementById('project-name').textContent = conf.project ?? 'engram';
+    document.getElementById('domain-label').textContent = conf.domain ?? '';
+
+    const chipsEl = document.getElementById('subsystem-chips');
+    chipsEl.innerHTML = '';
+    (conf.subsystems || []).forEach(function(s){
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.textContent = s;
+      b.addEventListener('click', function(){ setSubsystem(s, b); });
+      chipsEl.appendChild(b);
+    });
+  }catch(e){
+    console.error('config error', e);
+    document.getElementById('s-status').textContent = 'error';
+  }
+}
+
+function setSubsystem(s, el){
+  activeSub = s;
+  document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function setMode(m){
+  mode = m;
+  document.getElementById('btn-ask').classList.toggle('active', m==='ask');
+  document.getElementById('btn-search').classList.toggle('active', m==='search');
+  document.getElementById('answer-box').style.display = 'none';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('query').placeholder =
+    m==='ask' ? 'What caused the servo to overheat?' : 'servo overheating gait backward';
+}
+
+async function submit(){
+  const q = document.getElementById('query').value.trim();
+  if(!q) return;
+  const resultsEl = document.getElementById('results');
+  const answerBox = document.getElementById('answer-box');
+  resultsEl.innerHTML = '<div class="loading">searching memory...</div>';
+  answerBox.style.display = 'none';
+
+  try{
+    if(mode==='ask'){
+      const r = await fetch('/ask',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({question:q, top_k:5, subsystem:activeSub})
+      });
+      const d = await r.json();
+      answerBox.style.display = 'block';
+      document.getElementById('answer-text').textContent = d.answer;
+      document.getElementById('answer-sources').textContent =
+        'sources: ' + d.sources.join(', ') + '  ·  ' + d.chunks_used + ' chunks used';
+      renderChunks(d.raw_chunks || []);
+    }else{
+      const r = await fetch('/query',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({query:q, top_k:10, subsystem:activeSub})
+      });
+      const d = await r.json();
+      renderChunks(d.results);
+    }
+  }catch(e){
+    resultsEl.innerHTML = '<div class="empty">error: ' + e.message + '</div>';
+  }
+
+  fetch('/stats').then(r=>r.json()).then(function(d){
+    document.getElementById('s-chunks').textContent = d.total_chunks;
+  }).catch(function(){});
+}
+
+function renderChunks(chunks){
+  const el = document.getElementById('results');
+  if(!chunks || !chunks.length){
+    el.innerHTML = '<div class="empty">no results found</div>';
+    return;
+  }
+  el.innerHTML = chunks.map(function(c){
+    return '<div class="chunk">' +
+      '<div class="chunk-meta">' +
+        '<span class="score">' + c.score + '</span>' +
+        '<span class="subsystem">' + c.subsystem + '</span>' +
+        '<span class="mtype">' + c.memory_type + '</span>' +
+        '<span class="docname">' + c.doc_name + '</span>' +
+      '</div>' +
+      '<div class="chunk-text">' + c.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>

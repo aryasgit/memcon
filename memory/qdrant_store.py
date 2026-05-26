@@ -1,11 +1,15 @@
-import uuid
+import uuid, sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import (
+    Distance, VectorParams, PointStruct,
+    Filter, FieldCondition, MatchValue
+)
+from config import cfg
 
-COLLECTION = "barq_memory"
-DIM = 384
-
-client = QdrantClient(host="localhost", port=6333)
+client = QdrantClient(host=cfg('qdrant','host'), port=cfg('qdrant','port'))
+COLLECTION = cfg('memory','collection')
+DIM = cfg('memory','vector_dim')
 
 def ensure_collection():
     existing = [c.name for c in client.get_collections().collections]
@@ -42,3 +46,15 @@ def search(query_vec: list[float], top_k: int = 5, subsystem: str = None) -> lis
         with_payload=True,
     ).points
     return [{"score": round(r.score, 4), **r.payload} for r in results]
+
+def get_stats() -> dict:
+    try:
+        info = client.get_collection(COLLECTION)
+        return {
+            "total_chunks": info.points_count,
+            "collection": COLLECTION,
+            "vector_dim": DIM,
+            "project": cfg('project','name'),
+        }
+    except:
+        return {"total_chunks": 0, "collection": COLLECTION}
