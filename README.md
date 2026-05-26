@@ -162,11 +162,21 @@ Docker Desktop must be running either way.
 
 ## Wire Memcon into Claude
 
+> **If you used the one-liner above, this is already done for you.**
+> The installer ran `scripts/register_mcp.py` which wrote the memcon
+> entry into your Claude Desktop config (preserving any other MCP servers
+> you had). Skip ahead to *Reliable auto-triggering* — just fully quit
+> Claude Desktop and reopen.
+
+If you installed manually (or want to wire other clients):
+
 ### Claude Desktop
 
 1. Start Memcon: `cd ~/memcon && docker compose up -d`
-2. Open `~/Library/Application Support/Claude/claude_desktop_config.json`
-   (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
+2. Open the config file:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - Linux: `~/.config/Claude/claude_desktop_config.json`
 3. Merge this into the `mcpServers` block:
 
    ```json
@@ -174,15 +184,28 @@ Docker Desktop must be running either way.
      "mcpServers": {
        "memcon": {
          "command": "/ABSOLUTE/PATH/TO/memcon/.venv/bin/python3",
-         "args": ["-m", "memcon_mcp.server"],
-         "cwd": "/ABSOLUTE/PATH/TO/memcon"
+         "args": ["/ABSOLUTE/PATH/TO/memcon/memcon_mcp/server.py"]
        }
      }
    }
    ```
 
-4. Restart Claude Desktop. `memcon` should now appear in the tool menu.
+   On Windows, the command path is
+   `C:\path\to\memcon\.venv\Scripts\python.exe` instead.
+
+   > Why `args=["…/server.py"]` instead of `args=["-m","memcon_mcp.server"]`?
+   > Claude Desktop on macOS sandboxes the MCP subprocess with `cwd=/` and
+   > strips `PYTHONPATH`, so `-m` can't find the `memcon_mcp` package.
+   > Running `server.py` by absolute path puts the script's directory on
+   > `sys.path` automatically and works under the sandbox.
+
+4. Fully quit Claude Desktop (`Cmd+Q` / right-click tray → Quit), reopen.
 5. Ask Claude *"use memcon to check what we know about servo overheating."*
+
+Or just re-run the auto-registrar instead of editing JSON by hand:
+```bash
+python3 scripts/register_mcp.py
+```
 
 ### Cursor
 
@@ -195,15 +218,51 @@ Add the same block to `~/.claude/settings.json` (or a project-level
 
 ### Reliable auto-triggering
 
-Claude has to *decide* to call the tools. To make that reflex automatic, paste
-this into Claude's project memory:
+Claude has to *decide* to call the tools. To make that reflex automatic,
+paste this into Claude's project memory / system prompt:
 
 > You have access to the `memcon_*` MCP tools. Before answering any question
 > about this project, call `memcon_query` with the user's symptoms/keywords
-> and use the returned chunks as authoritative context. After solving a
-> problem, call `memcon_write_debug` (or `_decision` / `_experiment`) so the
-> resolution persists. At the end of a session, call `memcon_session_summary`.
-> Do not invent project details that are not in the returned chunks.
+> and use the returned chunks as authoritative context.
+>
+> When the user asks to save/log/remember something — phrases like
+> "save this", "log this", "save the debugging session", "log my decision",
+> "remember this experiment", "session summary" — **always reach for
+> `memcon_capture`**. Summarise the recent conversation into the `text`
+> argument; the local LLM running inside memcon will extract title /
+> symptom / cause / fix (or decision / reasoning, etc.) automatically. Only
+> use `memcon_write_debug` / `_decision` / `_experiment` when the user
+> explicitly provides pre-structured fields.
+>
+> At the end of a working session, call `memcon_session_summary` (or
+> `memcon_capture` with `hint="session"`). Do not invent project details
+> that are not in the returned chunks.
+
+---
+
+## Cross-OS install matrix
+
+| OS | One-liner | Notes |
+|---|---|---|
+| **macOS / Linux / WSL** | `curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh \| bash` | Uses bash |
+| **Windows native** (PowerShell) | `iwr -useb https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.ps1 \| iex` | Uses PowerShell + `install.bat` |
+
+Behind the scenes:
+
+| Concern | macOS | Linux | Windows |
+|---|---|---|---|
+| Bootstrap script | `bootstrap.sh` | `bootstrap.sh` | `bootstrap.ps1` |
+| Installer | `install.sh` | `install.sh` | `install.bat` |
+| RAM detection | `sysctl hw.memsize` | `/proc/meminfo` | `wmic` |
+| Claude config path | `~/Library/Application Support/Claude/…` | `~/.config/Claude/…` | `%APPDATA%\Claude\…` |
+| Venv interpreter | `.venv/bin/python3` | `.venv/bin/python3` | `.venv\Scripts\python.exe` |
+| Skip MCP registration | `MEMCON_SKIP_MCP=1 …` | same | `set MEMCON_SKIP_MCP=1` |
+
+`scripts/register_mcp.py` is cross-platform and handles all three config
+paths and venv layouts. Bad / non-JSON existing configs get backed up
+automatically (`*.bak-<timestamp>`). Permission failures degrade gracefully
+— the rest of the install keeps going and the script prints a one-line
+warning.
 
 ---
 
@@ -391,6 +450,74 @@ If the venv breaks (e.g. after moving the folder):
 ```bash
 rm -rf .venv && ./install.sh
 ```
+
+---
+
+## Troubleshooting
+
+### Claude Desktop says `memcon: Server disconnected`
+
+Click **Open developer settings** → select `memcon` → **View Logs**, or
+in Terminal:
+```bash
+tail -60 ~/Library/Logs/Claude/mcp-server-memcon.log
+```
+
+Most common causes:
+
+| Log says | Fix |
+|---|---|
+| `No module named 'memcon_mcp'` | You're using the old `-m memcon_mcp.server` form. Use the absolute-path form (`args: ["/path/to/memcon/memcon_mcp/server.py"]`) — Claude Desktop sandboxes the spawn with `cwd=/` and `-m` can't find the package. Run `python3 scripts/register_mcp.py` to rewrite it correctly. |
+| `No module named 'mcp'` / `'openai'` | venv is missing dependencies. Run `./install.sh` or `.venv/bin/python3 -m pip install -r requirements.txt`. |
+| `[Errno 30] Read-only file system: 'vault'` | Old code with relative `vault.path`. `git pull` and restart Claude Desktop — the fix is in `config.py` (absolutises the vault path at config-load). |
+| `Connection refused` to localhost:6333 | Qdrant container is stopped. `cd ~/memcon && docker compose up -d` |
+
+### "save this" / "save debug session" — Claude asks for more details instead of saving
+
+By default Claude Desktop doesn't know that `memcon_capture` is the right
+tool for loose, short save commands. Add the auto-triggering prompt above
+to Claude's project memory. After that, any of these phrases will route
+through `memcon_capture` and the local LLM will structure them:
+- "save this" / "save it" / "log this"
+- "save the debugging session" / "log my decision" / "remember this experiment"
+- "session summary" / "save today's session"
+
+If you're invoking from outside Claude (curl, scripts, etc.), call
+`memcon_capture(text=...)` directly with a paragraph of context — no need
+to fill in title/symptom/cause/fix yourself.
+
+### `install.sh` set `embedding_model` to my LLM model
+
+Old bug from before commit `f1d39bb`. Fix with one line and re-ingest:
+```bash
+sed -i '' 's|embedding_model: ".*"|embedding_model: "all-MiniLM-L6-v2"|' memcon.config.yaml
+source .venv/bin/activate && python3 scripts/ingest_all.py
+```
+
+### Venv breaks after I move the project folder
+
+Python venvs hard-code their absolute paths into the wrapper scripts. After
+a move:
+```bash
+rm -rf .venv && ./install.sh
+```
+
+### First `memcon_query` is slow (3–5 seconds)
+
+`sentence-transformers` lazy-loads the embedding model on the first call
+of each process. Instant after that for the rest of the session. The
+~90 MB model is cached locally so it doesn't re-download.
+
+### MCP works in Claude Desktop but not in Claude Code (or vice versa)
+
+Each client has its own config file:
+- Claude Desktop → `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+- Cursor → `~/.cursor/mcp.json`
+- Claude Code CLI → `~/.claude/settings.json`
+
+`scripts/register_mcp.py` only writes Claude Desktop's. Copy the same
+`memcon` block into the other config files manually if you want it
+everywhere.
 
 ---
 
