@@ -9,9 +9,9 @@ def get_model():
     global _model
     if _model is None:
         model_name = cfg('memory','embedding_model')
-        print(f"[embedder] Loading {model_name}...")
+        print(f"[embedder] Loading {model_name}...", file=sys.stderr)
         _model = SentenceTransformer(model_name)
-        print("[embedder] Model ready.")
+        print("[embedder] Model ready.", file=sys.stderr)
     return _model
 
 def embed(texts: list[str]) -> list[list[float]]:

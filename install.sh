@@ -76,9 +76,14 @@ source .venv/bin/activate
 
 # ── INSTALL DEPS ──────────────────────────
 echo "📦 Installing Python packages..."
-python3 -m pip install -q fastapi uvicorn qdrant-client sentence-transformers \
-  watchdog anthropic python-frontmatter python-dotenv \
-  gitpython rich openai pyyaml
+python3 -m pip install -q --upgrade pip
+if [ -f "requirements.txt" ]; then
+  python3 -m pip install -q -r requirements.txt
+else
+  python3 -m pip install -q fastapi uvicorn qdrant-client sentence-transformers \
+    watchdog anthropic python-frontmatter python-dotenv \
+    gitpython rich openai pyyaml mcp
+fi
 
 # ── PULL LLM MODEL ───────────────────────
 echo "📦 Pulling LLM: $SELECTED_MODEL (may take a few minutes)..."

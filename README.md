@@ -35,6 +35,11 @@ Engram captures everything — notes, commits, logs, experiments — embeds them
 
 **Everything runs on your machine. No cloud. No API costs. No data leaves your computer. Ever.**
 
+> **New:** Engram also runs as an **MCP server** so Claude (Desktop / Cursor /
+> Code) can auto-query your memory before answering and auto-write debug
+> sessions after solving a problem — no manual note-taking. See
+> [engram_mcp/README.md](engram_mcp/README.md).
+
 ---
 
 ## How It Works
@@ -124,6 +129,46 @@ One config file (`engram.config.yaml`) adapts Engram to any project type. Subsys
 ### 7. Web Dashboard
 A clean, local web UI at `localhost:8000/ui`. Search, filter by subsystem, switch between raw semantic search and LLM-grounded answers. No npm, no build step — single HTML file served by FastAPI.
 
+### 8. MCP Server — Claude Plugs Straight In
+Engram ships with a **Model Context Protocol** server. Wire it into Claude
+Desktop, Cursor, or Claude Code once and Claude will:
+
+- **Auto-query** Engram before answering project questions — only the
+  symptom-relevant chunks come back, not the whole vault. Think hashmap
+  lookup keyed by meaning.
+- **Auto-write** debug sessions, decisions, and experiments after solving a
+  problem — no copy-paste, the vault grows itself.
+
+How it works in practice:
+
+```
+You: "Why is the RR wrist overheating again?"
+        │
+        ▼
+Claude calls engram_query("RR wrist overheating servo")
+        │
+        ▼
+Engram returns top-5 chunks from past debug notes
+        │
+        ▼
+Claude answers grounded in YOUR project history (not hallucinated)
+        │
+        ▼
+After you confirm the fix:
+Claude calls engram_write_debug(title, symptom, cause, fix, subsystem="servo")
+        │
+        ▼
+New note saved → re-ingested → searchable next session
+```
+
+The MCP server is a thin process spawned on demand by Claude Desktop / Cursor
+/ Claude Code over stdio. It runs entirely on your machine, never talks to
+the cloud, and exposes nine tools — `engram_query`, `engram_ask`,
+`engram_write_debug`, `engram_write_decision`, `engram_write_experiment`,
+`engram_session_summary`, `engram_update_note`, `engram_stats`,
+`engram_subsystems`. See [engram_mcp/README.md](engram_mcp/README.md) for
+one-step Claude Desktop / Cursor / Claude Code config.
+
 ---
 
 ## Demo
@@ -157,7 +202,32 @@ sources: i2c_oserror, rr_wrist_overheating · 5 chunks used
 
 ## Quick Start
 
-##FOR MAC
+### One-liner (macOS / Linux / WSL)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aryasgit/engram/main/bootstrap.sh | bash
+```
+
+Clones the repo to `~/engram` and runs the installer. Override the
+destination with `ENGRAM_DIR=/path/to/dir` and the branch with `ENGRAM_REF=...`.
+
+### Docker-only mode (no local Python)
+
+If you'd rather not touch a Python venv:
+
+```bash
+git clone https://github.com/aryasgit/engram.git && cd engram
+docker compose -f docker-compose.full.yml up -d --build
+open http://localhost:8000/ui
+```
+
+Runs Qdrant + the Engram API + the vault watcher all in containers. You still
+need Ollama installed on the host machine (Engram reaches it via
+`host.docker.internal`).
+
+---
+
+## Manual install (macOS)
 ### 1. Clone
 
 ```bash
@@ -202,7 +272,7 @@ Obsidian → Open folder as vault → select `engram/vault/`
 Every note you save is automatically ingested into memory.
 
 ---
-## FOR WINDOWS
+## Manual install (Windows)
 Windows does not run `.sh` scripts natively. Two options:
 
 ### Option A — WSL (Recommended)

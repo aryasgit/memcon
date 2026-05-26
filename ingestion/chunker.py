@@ -10,7 +10,7 @@ def chunk_markdown(filepath: str) -> list[dict]:
         with open(filepath) as f:
             post = frontmatter.load(f)
     except Exception as e:
-        print(f"[chunker] Skipping {filepath}: {e}")
+        print(f"[chunker] Skipping {filepath}: {e}", file=sys.stderr)
         return []
 
     text = post.content
