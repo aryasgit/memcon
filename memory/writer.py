@@ -5,6 +5,10 @@ Memcon writes and updates memory automatically.
 - log_debug()      → creates a debugging/ note
 - update_note()    → appends new findings to existing note
 - summarise_session() → end-of-session auto-summary
+
+Every new note gets an auto-generated `## Related` section with Obsidian
+[[wikilinks]] pointing at the top-K semantically similar existing notes —
+so the graph view fills itself in.
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -15,13 +19,44 @@ from ingestion.ingest import ingest_file
 
 VAULT = Path(cfg('vault', 'path'))
 
+
+def _find_related(query_text: str, exclude_doc: str, top_k: int = 4, max_links: int = 3) -> list[str]:
+    """Return up to `max_links` doc_names semantically nearest to query_text.
+
+    Excludes the note we're about to write (by doc_name) so a note never
+    links to itself. Best-effort: any failure (no embedder, no Qdrant, empty
+    vault) returns []."""
+    try:
+        from memory.retrieve import query as _semantic_query
+        results = _semantic_query(query_text, top_k=top_k)
+    except Exception:
+        return []
+    seen, out = set(), []
+    for r in results:
+        dn = r.get('doc_name')
+        if not dn or dn == exclude_doc or dn in seen:
+            continue
+        seen.add(dn)
+        out.append(dn)
+        if len(out) >= max_links:
+            break
+    return out
+
+
 def _write_note(folder: str, filename: str, content: str) -> str:
-    """Write a note to vault and immediately ingest it."""
+    """Write a note to vault, append related [[wikilinks]], and ingest."""
     target_dir = VAULT / folder
     target_dir.mkdir(parents=True, exist_ok=True)
     filepath = target_dir / f"{filename}.md"
 
-    # If file exists, append rather than overwrite
+    # Find semantically related notes BEFORE writing — so the new note isn't
+    # in the index yet and can't show up as its own neighbour.
+    related = _find_related(content, exclude_doc=filename)
+    if related:
+        content = content.rstrip() + "\n\n## Related\n" + \
+                  "\n".join(f"- [[{name}]]" for name in related) + "\n"
+
+    # Append-on-exists, write fresh otherwise
     if filepath.exists():
         with open(filepath, 'a') as f:
             f.write(f"\n\n---\n*Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*\n\n{content}")

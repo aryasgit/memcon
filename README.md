@@ -62,8 +62,17 @@ That's it. That's the product.
 
 The MCP server is a thin process Claude Desktop / Cursor / Claude Code spawns
 on demand over stdio. **It runs entirely on your machine. Zero cloud, zero API
-cost, zero hosting.** You add 6 lines to a config file, restart Claude, and
-suddenly Claude has reliable long-term memory of your project.
+cost, zero hosting.** The installer wires it into Claude Desktop for you;
+restart Claude and suddenly it has reliable long-term memory of your project.
+
+**Low-friction writes:** you don't have to spell out every field. Tell
+Claude *"save this as a debugging session"* and `memcon_capture` invokes the
+local LLM to extract title / symptom / cause / fix / subsystem / tags from
+context, then writes the structured note.
+
+**Self-organising vault:** every new note auto-gets an `## Related` section
+with Obsidian `[[wikilinks]]` to the top-3 semantically similar notes — so
+the graph view fills itself in as you work.
 
 See [`memcon_mcp/README.md`](memcon_mcp/README.md) for the full tool catalogue
 and per-client setup snippets.
@@ -79,8 +88,12 @@ curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh |
 ```
 
 Clones into `~/memcon`, installs deps, picks the right LLM for your RAM,
-pulls it via Ollama, starts Qdrant, and ingests the starter vault. Takes 5–10
-minutes the first time (model download is the slow part).
+pulls it via Ollama, starts Qdrant, ingests the starter vault, **and
+auto-registers Memcon in your Claude Desktop config** (preserves any
+existing MCP servers). Takes 5–10 minutes the first time.
+
+After it finishes, just `Cmd+Q` Claude Desktop and reopen — `memcon` is
+already wired in.
 
 Overrides:
 ```bash
@@ -88,6 +101,8 @@ Overrides:
 MEMCON_DIR=/opt/memcon curl -fsSL ... | bash
 # Force a specific model
 MEMCON_MODEL=qwen2.5-coder:14b curl -fsSL ... | bash
+# Skip Claude Desktop registration
+MEMCON_SKIP_MCP=1 curl -fsSL ... | bash
 ```
 
 ### No-Python mode — Docker only

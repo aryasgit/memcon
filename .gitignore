@@ -7,3 +7,7 @@ __pycache__/
 .watcher.pid
 .claude/
 tmp/
+
+# Obsidian workspace state — personal, don't commit
+vault/.obsidian/
+vault/Untitled.*
