@@ -124,9 +124,12 @@
     background:var(--bg-elev);border:1px solid var(--border);
     padding:.7rem 1rem;border-radius:8px;
     font-family:'JetBrains Mono',monospace;font-size:.82rem;
-    margin-top:2rem;max-width:680px;
+    margin-top:1.5rem;max-width:680px;
     color:var(--text-2);overflow-x:auto;white-space:nowrap;
   }
+  .install-hint{margin-top:.6rem;font-size:.78rem;color:var(--text-faint);max-width:680px}
+  .install-hint a{color:var(--text-dim);border-bottom:1px dashed var(--border-strong);text-decoration:none}
+  .install-hint a:hover{color:var(--text);border-bottom-color:var(--text)}
   .install-strip .prompt{color:var(--text-faint);user-select:none}
   .install-strip .cmd{flex:1}
   .install-strip .copy{
@@ -325,14 +328,15 @@
       debug sessions after solving them. Nothing leaves your machine.
     </p>
     <div class="hero-ctas">
-      <a href="#install" class="btn primary">Install in 60 seconds →</a>
-      <a href="#loop" class="btn ghost">Watch the loop</a>
+      <a id="download-btn" href="install/memcon-install.command" download class="btn primary">Download installer</a>
+      <a href="#install" class="btn ghost">or use a command →</a>
     </div>
     <div class="install-strip">
       <span class="prompt">$</span>
       <span class="cmd" id="install-cmd">curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash</span>
       <button class="copy" onclick="copyInstall()">copy</button>
     </div>
+    <div class="install-hint" id="install-hint">macOS / Linux — double-click to run · <a href="https://github.com/aryasgit/memcon/blob/main/bootstrap.sh" target="_blank">read the source</a></div>
   </div>
 </section>
 
@@ -539,13 +543,14 @@
       <h2 class="display">One command. <span class="subtle">Five minutes.</span></h2>
       <p class="section-lead" style="margin:0 auto 2rem">macOS, Linux, or WSL. Needs Docker + Python 3.10+. The installer detects your RAM and pulls the right LLM automatically.</p>
     </div>
-    <div class="install-strip reveal" style="margin:2rem auto">
+    <div class="install-strip reveal" id="install-strip-bottom" style="margin:2rem auto">
       <span class="prompt">$</span>
-      <span class="cmd">curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash</span>
+      <span class="cmd" id="install-cmd-bottom">curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash</span>
       <button class="copy" onclick="copyInstall()">copy</button>
     </div>
     <div class="cta-row reveal">
-      <a href="https://github.com/aryasgit/memcon" target="_blank" class="btn primary">View on GitHub ↗</a>
+      <a id="download-btn-bottom" href="install/memcon-install.command" download class="btn primary">Download installer</a>
+      <a href="https://github.com/aryasgit/memcon" target="_blank" class="btn ghost">View on GitHub ↗</a>
       <a href="https://github.com/aryasgit/memcon/tree/main/memcon_mcp" target="_blank" class="btn ghost">MCP Docs</a>
     </div>
   </div>
@@ -582,9 +587,45 @@
 </main>
 
 <script>
-  // Copy install command
+  // ── OS detection — swap install assets to the right one ──
+  function detectOS(){
+    var p = (navigator.userAgent + ' ' + (navigator.platform || '')).toLowerCase();
+    if (p.indexOf('win') !== -1) return 'win';
+    if (p.indexOf('mac') !== -1 || p.indexOf('iphone') !== -1 || p.indexOf('ipad') !== -1) return 'mac';
+    return 'linux';
+  }
+  var OS = detectOS();
+  var OS_CONFIG = {
+    mac:   { label:'Download installer (macOS)',   file:'install/memcon-install.command',
+             cmd:'curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash',
+             hint:'macOS — double-click the file to run' },
+    linux: { label:'Download installer (Linux)',   file:'install/memcon-install.command',
+             cmd:'curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash',
+             hint:'Linux — `chmod +x memcon-install.command` then run it' },
+    win:   { label:'Download installer (Windows)', file:'install/memcon-install.bat',
+             cmd:'iwr -useb https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.ps1 | iex',
+             hint:'Windows — double-click the file to run' }
+  };
+  (function(){
+    var c = OS_CONFIG[OS];
+    ['download-btn','download-btn-bottom'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el){ el.textContent = c.label; el.href = c.file; }
+    });
+    ['install-cmd','install-cmd-bottom'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.textContent = c.cmd;
+    });
+    var hint = document.getElementById('install-hint');
+    if (hint){
+      hint.innerHTML = c.hint + ' · <a href="https://github.com/aryasgit/memcon/blob/main/' +
+        (OS === 'win' ? 'bootstrap.ps1' : 'bootstrap.sh') + '" target="_blank">read the source</a>';
+    }
+  })();
+
+  // Copy install command (per-OS)
   function copyInstall(){
-    var cmd = 'curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash';
+    var cmd = OS_CONFIG[OS].cmd;
     navigator.clipboard.writeText(cmd).then(function(){
       var btns = document.querySelectorAll('.copy');
       btns.forEach(function(b){
