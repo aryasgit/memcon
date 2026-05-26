@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+#
+# memcon — CLI for the local Memcon API.
+#
+# Usage:
+#   memcon ask "what caused the servo to overheat?"
+#   memcon query "imu calibration" [--subsystem imu] [--top-k 5]
+#   memcon stats
+#   memcon recent [--limit 10]
+#   memcon digest [--days 7]
+#   memcon save "<freeform paragraph>"       # uses memcon_capture via the API
+#   memcon serve                              # start API + watcher (= ./start.sh)
+#   memcon stop                               # stop API + watcher (= ./stop.sh)
+#   memcon help
+#
+# Talks to MEMCON_API (default http://localhost:8000). Works from any directory.
+
+set -euo pipefail
+
+API="${MEMCON_API:-http://localhost:8000}"
+SELF_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+usage() {
+  sed -n '4,16p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+# Ensure jq exists for the JSON-pretty fallbacks (optional)
+have_jq() { command -v jq >/dev/null 2>&1; }
+pretty() { if have_jq; then jq .; else cat; fi; }
+
+require_api() {
+  if ! curl -fsS --max-time 2 "$API/health" -o /dev/null 2>&1; then
+    echo "❌ Memcon API not reachable at $API"
+    echo "   Start it with:  memcon serve     (or cd $SELF_DIR && ./start.sh)"
+    exit 1
+  fi
+}
+
+cmd="${1:-help}"; shift || true
+
+case "$cmd" in
+  ask)
+    require_api
+    q="${*:-}"
+    [ -z "$q" ] && { echo "Usage: memcon ask <question>"; exit 1; }
+    curl -fsS -X POST "$API/ask" \
+      -H "Content-Type: application/json" \
+      -d "{\"question\": $(printf '%s' "$q" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}" \
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('answer','(no answer)')); print(); print('sources:', ', '.join(d.get('sources',[])), '·', d.get('chunks_used',0),'chunks')"
+    ;;
+  query|search)
+    require_api
+    q="${*:-}"
+    [ -z "$q" ] && { echo "Usage: memcon query <text>"; exit 1; }
+    curl -fsS -X POST "$API/query" \
+      -H "Content-Type: application/json" \
+      -d "{\"query\": $(printf '%s' "$q" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))'), \"top_k\": 5}" \
+      | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for r in d.get('results', []):
+    print(f'[{r[\"score\"]}] {r[\"doc_name\"]} ({r[\"subsystem\"]}/{r[\"memory_type\"]})')
+    print('  ' + r['text'][:200].replace('\n', ' '))
+    print()"
+    ;;
+  stats)
+    require_api
+    curl -fsS "$API/stats" | pretty
+    ;;
+  recent)
+    require_api
+    limit="${1:-10}"
+    curl -fsS "$API/memory/recent?limit=$limit" \
+      | python3 -c "
+import json, sys, time
+d = json.load(sys.stdin)
+now = time.time()
+for n in d.get('notes', []):
+    age = now - n['mtime']
+    if age < 60: ago = f'{int(age)}s ago'
+    elif age < 3600: ago = f'{int(age/60)}m ago'
+    elif age < 86400: ago = f'{int(age/3600)}h ago'
+    else: ago = f'{int(age/86400)}d ago'
+    print(f'{n[\"folder\"]}/{n[\"name\"]} — {ago}')"
+    ;;
+  digest)
+    require_api
+    days="${1:-7}"
+    # Calls the API's /ask wrapper to invoke memcon_digest via the local LLM,
+    # since digest is an MCP tool and the FastAPI surface doesn't expose it
+    # directly. Falls back to a structured query.
+    curl -fsS -X POST "$API/ask" \
+      -H "Content-Type: application/json" \
+      -d "{\"question\": \"Give me a digest of what's happened in the last $days days. Themes, wins, open items, worth revisiting. Be concise.\", \"top_k\": 25}" \
+      | python3 -c "import json,sys; print(json.load(sys.stdin).get('answer','(no answer)'))"
+    ;;
+  save|capture)
+    require_api
+    text="${*:-}"
+    [ -z "$text" ] && { echo "Usage: memcon save <freeform text>"; exit 1; }
+    # The FastAPI surface doesn't expose memcon_capture directly — use the
+    # write_debug endpoint with the text dumped as symptom + a placeholder title.
+    # For real auto-extraction, call from Claude Desktop (which has the MCP tool).
+    curl -fsS -X POST "$API/memory/session" \
+      -H "Content-Type: application/json" \
+      -d "{\"summary\": $(printf '%s' "$text" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))'), \"subsystem\": \"unknown\"}" \
+      | pretty
+    echo
+    echo "💡 For auto-structured saves (title/symptom/cause/fix), invoke memcon_capture from Claude Desktop."
+    ;;
+  serve|start)
+    cd "$SELF_DIR" && exec ./start.sh
+    ;;
+  stop)
+    cd "$SELF_DIR" && exec ./stop.sh
+    ;;
+  ui|dash|dashboard)
+    require_api
+    if command -v open >/dev/null 2>&1; then open "$API/ui";
+    elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$API/ui";
+    else echo "$API/ui"; fi
+    ;;
+  help|-h|--help|"")
+    usage
+    ;;
+  *)
+    echo "Unknown command: $cmd"
+    echo ""
+    usage
+    exit 1
+    ;;
+esac

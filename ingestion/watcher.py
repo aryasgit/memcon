@@ -4,9 +4,12 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from ingestion.ingest import ingest_file
 
+INGESTIBLE_SUFFIXES = (".md", ".pdf")
+
+
 class VaultHandler(FileSystemEventHandler):
     def _try_ingest(self, path):
-        if path.endswith(".md") and os.path.exists(path):
+        if path.lower().endswith(INGESTIBLE_SUFFIXES) and os.path.exists(path):
             ingest_file(path)
 
     def on_modified(self, event):

@@ -1,12 +1,12 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from ingestion.chunker import chunk_markdown
+from ingestion.chunker import chunk_file
 from ingestion.embedder import embed
 from memory.qdrant_store import ensure_collection, upsert_chunks
 
 def ingest_file(filepath: str) -> int:
     ensure_collection()
-    chunks = chunk_markdown(filepath)
+    chunks = chunk_file(filepath)
     if not chunks:
         print(f"[ingest] No chunks found in {filepath}", file=sys.stderr)
         return 0

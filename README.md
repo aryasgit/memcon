@@ -16,6 +16,8 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-000.svg)](https://python.org)
 [![Local First](https://img.shields.io/badge/runs-100%25%20local-000.svg)]()
 [![MCP Ready](https://img.shields.io/badge/MCP-ready-000.svg)]()
+[![GitHub stars](https://img.shields.io/github/stars/aryasgit/memcon?style=flat&color=000&logo=github&logoColor=white)](https://github.com/aryasgit/memcon/stargazers)
+[![Sponsor](https://img.shields.io/badge/sponsor-❤-000.svg?logo=github-sponsors&logoColor=white)](https://github.com/sponsors/aryasgit)
 
 </div>
 
@@ -237,6 +239,59 @@ paste this into Claude's project memory / system prompt:
 > At the end of a working session, call `memcon_session_summary` (or
 > `memcon_capture` with `hint="session"`). Do not invent project details
 > that are not in the returned chunks.
+
+---
+
+## What goes into memory
+
+Memcon can ingest much more than hand-written markdown notes:
+
+| Source | How | Tagged as |
+|---|---|---|
+| **Markdown in `vault/`** | Auto-ingested on save via the watcher | `subsystem` from frontmatter |
+| **PDFs in `vault/`** | Drop a `.pdf` anywhere in `vault/` — auto-extracted page-by-page | `subsystem=docs` |
+| **Source code** | `python3 scripts/ingest_code.py [path]` walks a project directory respecting common exclusions (`.git`, `.venv`, `node_modules`, build dirs, binaries) | `subsystem=code`, `memory_type=procedural` |
+| **Git commits** | `./scripts/install_git_hook.sh [/path/to/repo]` installs a post-commit hook that ingests each commit automatically | `subsystem=version_control`, `memory_type=episodic` |
+| **MCP writes** | `memcon_capture` / `memcon_write_*` from Claude — auto-extracted and structured | per-tool defaults |
+
+## CLI
+
+`bin/memcon` is a one-binary CLI to the local API. Add `~/memcon/bin` to your
+`PATH` and you can run from any directory:
+
+```bash
+memcon ask    "what caused the servo to overheat?"
+memcon query  "imu calibration"
+memcon recent
+memcon stats
+memcon digest 14            # LLM-generated summary of last 14 days
+memcon save   "today I…"    # session-summary capture
+memcon serve                # start API + watcher (= ./start.sh)
+memcon ui                   # open the dashboard in your browser
+```
+
+## Multi-project switching
+
+One Memcon install can back N projects via environment variables:
+
+```bash
+# In project foo's shell
+export MEMCON_VAULT=~/projects/foo/vault
+export MEMCON_COLLECTION=foo_memory
+./start.sh
+
+# Different terminal, project bar
+export MEMCON_VAULT=~/projects/bar/vault
+export MEMCON_COLLECTION=bar_memory
+./start.sh
+```
+
+| Var | Overrides |
+|---|---|
+| `MEMCON_VAULT` | `vault.path` in yaml |
+| `MEMCON_COLLECTION` | Qdrant collection name |
+| `MEMCON_MODEL` | Ollama model |
+| `MEMCON_QDRANT_HOST` / `_PORT` | Qdrant endpoint |
 
 ---
 
@@ -539,10 +594,19 @@ MIT — do whatever you want with it.
 
 ---
 
+## Support
+
+Memcon is built and maintained in spare time. If it saves yours,
+consider [sponsoring on GitHub](https://github.com/sponsors/aryasgit) —
+every contribution funds direct development time and tells me this
+matters. No paywalls, no pro tier, no telemetry.
+
+---
+
 <div align="center">
 
 Built for engineers who build hard things.
 
-**[⭐ Star on GitHub](https://github.com/aryasgit/memcon)**
+**[⭐ Star on GitHub](https://github.com/aryasgit/memcon)** · **[❤ Sponsor](https://github.com/sponsors/aryasgit)**
 
 </div>
