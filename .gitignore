@@ -4,6 +4,6 @@ qdrant_storage/
 __pycache__/
 *.pyc
 .DS_Store
-.env
-.env
-.env
+.watcher.pid
+.claude/
+tmp/

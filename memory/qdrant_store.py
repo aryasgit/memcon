@@ -7,7 +7,10 @@ from qdrant_client.models import (
 )
 from config import cfg
 
-client = QdrantClient(host=cfg('qdrant','host'), port=cfg('qdrant','port'))
+client = QdrantClient(
+    host=os.getenv('ENGRAM_QDRANT_HOST', cfg('qdrant','host')),
+    port=int(os.getenv('ENGRAM_QDRANT_PORT', cfg('qdrant','port'))),
+)
 COLLECTION = cfg('memory','collection')
 DIM = cfg('memory','vector_dim')
 
@@ -18,7 +21,7 @@ def ensure_collection():
             collection_name=COLLECTION,
             vectors_config=VectorParams(size=DIM, distance=Distance.COSINE),
         )
-        print(f"[qdrant] Created collection: {COLLECTION}")
+        print(f"[qdrant] Created collection: {COLLECTION}", file=sys.stderr)
 
 def upsert_chunks(chunks: list[dict], vectors: list[list[float]]) -> int:
     points = [

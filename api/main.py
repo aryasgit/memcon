@@ -1,6 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from fastapi import FastAPI
+from pathlib import Path
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from memory.retrieve import query
@@ -11,6 +12,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from config import cfg
 load_dotenv()
+
+VAULT_ROOT = Path(cfg('vault', 'path')).resolve()
+SKIP_DIRS = set(cfg('vault', 'skip_dirs') or [])
 
 app = FastAPI(title="Engram API")
 llm = OpenAI(
@@ -166,3 +170,44 @@ def write_session(req: SessionRequest):
 def ingest(req: IngestRequest):
     n = ingest_file(req.filepath)
     return {"chunks_added": n}
+
+# ── RECENT ACTIVITY + NOTE PREVIEW ───────────────────────
+
+@app.get("/memory/recent")
+def recent(limit: int = 10):
+    """Latest notes in the vault, sorted by modification time."""
+    if not VAULT_ROOT.exists():
+        return {"notes": []}
+    notes = []
+    for p in VAULT_ROOT.rglob("*.md"):
+        if any(part in SKIP_DIRS for part in p.relative_to(VAULT_ROOT).parts):
+            continue
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        notes.append({
+            "path": str(p.relative_to(VAULT_ROOT.parent)),
+            "name": p.stem,
+            "folder": p.parent.name,
+            "mtime": st.st_mtime,
+            "size": st.st_size,
+        })
+    notes.sort(key=lambda n: n["mtime"], reverse=True)
+    return {"notes": notes[:limit]}
+
+
+@app.get("/memory/note")
+def note(path: str):
+    """Return raw markdown of a vault note. Path is validated to stay inside the vault."""
+    candidate = (VAULT_ROOT.parent / path).resolve()
+    try:
+        candidate.relative_to(VAULT_ROOT)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="path outside vault")
+    if not candidate.exists() or not candidate.is_file():
+        raise HTTPException(status_code=404, detail="not found")
+    return {
+        "path": str(candidate.relative_to(VAULT_ROOT.parent)),
+        "content": candidate.read_text(),
+    }

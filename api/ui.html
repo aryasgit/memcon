@@ -1,117 +1,332 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Engram</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  :root[data-theme="dark"] {
+    --bg:#0a0a0a;
+    --bg-elev:#141414;
+    --bg-soft:#1a1a1a;
+    --bg-input:#161616;
+    --text:#f4f4f4;
+    --text-2:#cfcfcf;
+    --text-dim:#9a9a9a;
+    --text-faint:#666;
+    --text-ghost:#3a3a3a;
+    --border:#232323;
+    --border-2:#2e2e2e;
+    --border-strong:#444;
+    --accent:#fff;
+    --error:#d66;
+  }
+  :root[data-theme="light"] {
+    --bg:#fafafa;
+    --bg-elev:#fff;
+    --bg-soft:#f1f1f1;
+    --bg-input:#fff;
+    --text:#0a0a0a;
+    --text-2:#222;
+    --text-dim:#555;
+    --text-faint:#888;
+    --text-ghost:#c4c4c4;
+    --border:#e6e6e6;
+    --border-2:#d8d8d8;
+    --border-strong:#b8b8b8;
+    --accent:#000;
+    --error:#a33;
+  }
+
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'IBM Plex Mono',monospace;background:#0a0a0a;color:#e0e0e0;min-height:100vh;padding:2rem}
-  h1{font-size:1.4rem;color:#00ff88;letter-spacing:.1em}
-  .subtitle{color:#444;font-size:.8rem;margin-bottom:2rem}
-  .stats-bar{display:flex;gap:2rem;margin-bottom:2rem;font-size:.75rem;color:#444;border-bottom:1px solid #1a1a1a;padding-bottom:1rem}
-  .stats-bar .val{color:#00ff88}
-  .mode-toggle{display:flex;gap:.5rem;margin-bottom:1rem}
-  .mode-btn{background:#111;border:1px solid #222;color:#555;padding:.4rem 1rem;font-family:inherit;font-size:.8rem;cursor:pointer;transition:all .2s}
-  .mode-btn.active{border-color:#00ff88;color:#00ff88}
-  .search-bar{display:flex;gap:.5rem;margin-bottom:1rem}
-  input[type=text]{flex:1;background:#111;border:1px solid #222;color:#e0e0e0;padding:.75rem 1rem;font-family:inherit;font-size:.9rem;outline:none;transition:border-color .2s}
-  input[type=text]:focus{border-color:#00ff88}
-  input[type=text].hidden{display:none}
-  button.go{background:#00ff88;color:#000;border:none;padding:.75rem 1.5rem;font-family:inherit;font-weight:700;cursor:pointer;font-size:.9rem}
-  button.go:hover{background:#00cc6a}
-  .filters{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center}
-  .filter-label{color:#333;font-size:.7rem;margin-right:.25rem}
-  .chip{background:#111;border:1px solid #1e1e1e;color:#555;padding:.3rem .7rem;font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .2s}
-  .chip:hover{border-color:#333;color:#888}
-  .chip.active{border-color:#00ff88;color:#00ff88}
-  .answer-box{background:#0f1a14;border-left:3px solid #00ff88;padding:1.25rem;margin-bottom:1.5rem;display:none}
-  .answer-label{color:#00ff88;font-size:.7rem;letter-spacing:.1em;margin-bottom:.75rem}
-  .answer-text{line-height:1.7;font-size:.88rem;color:#ccc;white-space:pre-wrap}
-  .answer-sources{color:#333;font-size:.7rem;margin-top:.75rem;border-top:1px solid #1a1a1a;padding-top:.5rem}
-  .results{display:flex;flex-direction:column;gap:.6rem}
-  .chunk{background:#111;border:1px solid #1a1a1a;padding:1rem;transition:border-color .2s}
-  .chunk:hover{border-color:#2a2a2a}
-  .chunk-meta{display:flex;gap:1rem;margin-bottom:.6rem;font-size:.7rem;flex-wrap:wrap}
-  .score{color:#00ff88}
-  .subsystem{color:#888;background:#1a1a1a;padding:.1rem .4rem}
-  .mtype{color:#555}
-  .docname{color:#444}
-  .chunk-text{font-size:.83rem;line-height:1.6;color:#aaa}
-  .empty{color:#333;font-size:.85rem;padding:2rem 0}
-  .loading{color:#333;font-size:.85rem}
-  .top-right{position:fixed;top:1.5rem;right:2rem;text-align:right;font-size:.7rem;color:#222}
-  .top-right .project{color:#00ff88;font-size:.8rem}
-  /* Write panel */
-  .write-panel{display:none;margin-top:0}
-  .write-header{color:#00ff88;font-size:.7rem;letter-spacing:.1em;margin-bottom:1rem}
-  .write-types{display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap}
-  .wfield{width:100%;background:#111;border:1px solid #222;color:#e0e0e0;padding:.65rem;font-family:'IBM Plex Mono',monospace;font-size:.83rem;margin-bottom:.5rem;outline:none;transition:border-color .2s}
-  .wfield:focus{border-color:#00ff88}
-  textarea.wfield{resize:vertical;min-height:70px}
-  select.wfield{cursor:pointer}
-  .write-result{margin-top:.75rem;font-size:.8rem;display:none;padding:.5rem;border-left:2px solid #00ff88}
+  html,body{background:var(--bg);color:var(--text);height:100%;overflow:hidden}
+  body{
+    font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    font-feature-settings:"cv11","ss01","ss03";
+    transition:background .25s,color .25s;
+  }
+  .display{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.02em;font-weight:700}
+  .mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  /* ── APP SHELL ───────────────────────────────────────── */
+  .app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr;height:100vh;background:var(--bg)}
+  @media(max-width:820px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .sidebar.open{display:flex;position:fixed;inset:0;z-index:50;width:280px;background:var(--bg);border-right:1px solid var(--border)}
+    .hamburger{display:inline-flex !important}
+  }
+
+  /* ── HEADER ──────────────────────────────────────────── */
+  header{grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;padding:.85rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg);position:relative;z-index:5}
+  .brand-row{display:flex;align-items:center;gap:.85rem}
+  .hamburger{display:none;align-items:center;justify-content:center;width:32px;height:32px;background:transparent;border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:1rem}
+  .logo{display:flex;align-items:center;gap:.6rem;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
+  .logo .dot{width:8px;height:8px;background:var(--text);display:inline-block}
+  .header-meta{display:flex;align-items:center;gap:1rem;font-size:.8rem;color:var(--text-faint)}
+  .header-meta .proj{color:var(--text);font-weight:500}
+  .header-meta .domain{color:var(--text-faint)}
+  .icon-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;width:32px;height:32px;font-family:inherit;font-size:.95rem;line-height:1;transition:all .15s;display:inline-flex;align-items:center;justify-content:center}
+  .icon-btn:hover{border-color:var(--text);color:var(--text)}
+
+  /* ── SIDEBAR ─────────────────────────────────────────── */
+  .sidebar{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--bg);min-height:0;overflow:hidden}
+  .side-section{padding:1.25rem 1.25rem .9rem;border-bottom:1px solid var(--border)}
+  .side-section:last-child{flex:1;overflow:auto;border-bottom:none}
+  .side-label{font-family:'Space Grotesk',sans-serif;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
+  .side-label::before{content:"";display:inline-block;width:6px;height:6px;border:1px solid var(--text-faint)}
+
+  .mode-list{display:flex;flex-direction:column;gap:.15rem}
+  .mode-item{background:transparent;border:none;color:var(--text-dim);font-family:inherit;font-size:.92rem;font-weight:500;cursor:pointer;padding:.55rem .75rem;text-align:left;display:flex;align-items:center;gap:.6rem;border-radius:6px;transition:all .15s}
+  .mode-item:hover{background:var(--bg-soft);color:var(--text)}
+  .mode-item.active{background:var(--bg-elev);color:var(--text)}
+  .mode-item .glyph{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.75rem;color:var(--text-faint);width:18px;text-align:center}
+  .mode-item.active .glyph{color:var(--text)}
+
+  .chips-stack{display:flex;flex-wrap:wrap;gap:.35rem}
+  .chip{background:transparent;border:1px solid var(--border-2);color:var(--text-dim);padding:.28rem .7rem;font-family:inherit;font-size:.78rem;cursor:pointer;transition:all .15s;border-radius:999px}
+  .chip:hover{border-color:var(--text-dim);color:var(--text)}
+  .chip.active{border-color:var(--text);color:var(--text);background:var(--bg-elev)}
+
+  .recent-item{padding:.55rem 0;border-bottom:1px solid var(--border);cursor:pointer;transition:padding-left .15s}
+  .recent-item:hover{padding-left:.35rem}
+  .recent-item:last-child{border-bottom:none}
+  .recent-name{font-size:.82rem;color:var(--text);font-weight:500;word-break:break-word;line-height:1.35;margin-bottom:.15rem}
+  .recent-meta{font-size:.7rem;color:var(--text-faint)}
+
+  /* ── MAIN ────────────────────────────────────────────── */
+  .main{display:flex;flex-direction:column;min-height:0;min-width:0;position:relative}
+
+  .scroll{flex:1;overflow-y:auto;padding:2rem 2rem 8rem;scroll-behavior:smooth}
+  @media(max-width:820px){ .scroll{padding:1.25rem 1.25rem 8rem} }
+  .col{max-width:760px;margin:0 auto;width:100%}
+
+  /* Welcome / hero */
+  .hero{padding:2rem 0 3rem}
+  .hero h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(2.4rem,5.5vw,4rem);letter-spacing:-.035em;line-height:.95;margin-bottom:1.25rem}
+  .hero h1 .accent{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:.85em;letter-spacing:-.02em;background:var(--text);color:var(--bg);padding:0 .25em;display:inline-block;margin-left:.1em;vertical-align:.05em;line-height:1.05}
+  .hero p{font-size:1.05rem;color:var(--text-dim);max-width:560px;line-height:1.6}
+  .featured-label{font-family:'Space Grotesk',sans-serif;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);margin:2.5rem 0 1rem;display:flex;align-items:center;gap:.6rem}
+  .featured-label::before{content:"/";color:var(--text-ghost)}
+
+  /* Starter prompt cards */
+  .starters{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;margin-bottom:2rem}
+  @media(max-width:600px){ .starters{grid-template-columns:1fr} }
+  .starter{position:relative;border:1px solid var(--border);background:var(--bg-elev);padding:1.1rem 1.15rem 1.15rem;cursor:pointer;text-align:left;font-family:inherit;color:var(--text);transition:all .15s}
+  .starter:hover{border-color:var(--text);background:var(--bg-soft)}
+  .starter .tag{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text-faint);letter-spacing:.05em;margin-bottom:.55rem;text-transform:uppercase}
+  .starter .text{font-size:.93rem;line-height:1.45;color:var(--text)}
+  .starter::before,.starter::after{content:"";position:absolute;width:8px;height:8px;border-color:var(--text-faint);border-style:solid}
+  .starter::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+  .starter::after{top:-1px;right:-1px;border-width:1px 1px 0 0}
+
+  /* MCP note */
+  .note{position:relative;border:1px solid var(--border);background:var(--bg-elev);padding:.85rem 1.1rem;margin-bottom:1.5rem;display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;font-size:.86rem}
+  .note .label{font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--text);margin-right:.4rem;text-transform:uppercase;font-size:.72rem;letter-spacing:.1em}
+  .note .body{color:var(--text-dim);line-height:1.55;flex:1}
+  .note a{color:var(--text);border-bottom:1px solid var(--text-faint);text-decoration:none}
+  .note a:hover{border-bottom-color:var(--text)}
+  .note .dismiss{background:none;border:none;color:var(--text-faint);cursor:pointer;font-family:inherit;font-size:1.1rem;line-height:1;padding:0 .25rem}
+  .note .dismiss:hover{color:var(--text)}
+
+  /* Conversation */
+  .conv{display:flex;flex-direction:column;gap:1.5rem}
+  .msg{display:flex;flex-direction:column;gap:.55rem}
+  .msg .role{font-family:'Space Grotesk',sans-serif;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);display:flex;align-items:center;gap:.5rem}
+  .msg .role::before{content:"";display:inline-block;width:6px;height:6px;background:var(--text-faint)}
+  .msg.user .role::before{background:var(--text)}
+  .msg .bubble{font-size:1rem;line-height:1.65;color:var(--text);white-space:pre-wrap;word-wrap:break-word}
+  .msg.user .bubble{font-weight:500}
+  .msg .sources{font-size:.78rem;color:var(--text-faint);margin-top:.5rem;padding-top:.7rem;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace}
+
+  .chunks{margin-top:.85rem;display:flex;flex-direction:column;gap:.5rem}
+  .chunk{border:1px solid var(--border);background:var(--bg-elev);padding:.85rem 1rem;cursor:pointer;transition:all .15s;position:relative}
+  .chunk:hover{border-color:var(--text-dim);background:var(--bg-soft)}
+  .chunk-meta{display:flex;gap:.5rem;align-items:center;font-size:.72rem;color:var(--text-faint);margin-bottom:.5rem;flex-wrap:wrap}
+  .chunk-meta .score{font-family:'JetBrains Mono',monospace;color:var(--text);background:var(--bg-soft);padding:.05rem .4rem;border:1px solid var(--border-2)}
+  .chunk-meta .pill{padding:.05rem .45rem;border:1px solid var(--border-2);color:var(--text-dim)}
+  .chunk-meta .doc{color:var(--text-dim);margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.7rem}
+  .chunk-text{font-size:.88rem;line-height:1.6;color:var(--text-2)}
+
+  .skel{border:1px solid var(--border);padding:.85rem 1rem;background:var(--bg-elev)}
+  .skel-row{height:.55rem;background:var(--bg-soft);margin-bottom:.55rem;animation:pulse 1.4s ease-in-out infinite}
+  .skel-row:nth-child(1){width:30%;height:.45rem;margin-bottom:.75rem}
+  .skel-row:nth-child(2){width:92%}
+  .skel-row:nth-child(3){width:80%}
+  .skel-row:nth-child(4){width:60%;margin-bottom:0}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:.9}}
+
+  .empty{color:var(--text-faint);font-size:.9rem;padding:1.5rem 0;text-align:center}
+
+  /* ── INPUT DOCK ──────────────────────────────────────── */
+  .dock{position:absolute;bottom:0;left:0;right:0;padding:1.25rem 2rem 1.5rem;background:linear-gradient(to top,var(--bg) 70%,transparent);pointer-events:none}
+  @media(max-width:820px){ .dock{padding:1rem 1.25rem 1.25rem} }
+  .dock-inner{max-width:760px;margin:0 auto;pointer-events:auto}
+  .composer{background:var(--bg-input);border:1px solid var(--border-strong);border-radius:14px;padding:.75rem .85rem .75rem 1rem;display:flex;flex-direction:column;gap:.5rem;transition:border-color .15s}
+  .composer:focus-within{border-color:var(--text)}
+  .composer textarea{width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:inherit;font-size:.97rem;line-height:1.5;resize:none;min-height:1.5em;max-height:200px;padding:.25rem 0}
+  .composer textarea::placeholder{color:var(--text-faint)}
+  .composer-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+  .composer-meta{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--text-faint);flex-wrap:wrap}
+  .sub-select{background:var(--bg-soft);border:1px solid var(--border-2);color:var(--text-dim);font-family:inherit;font-size:.78rem;padding:.3rem .6rem;cursor:pointer;border-radius:999px;outline:none}
+  .sub-select:focus{border-color:var(--text-dim)}
+  .send-btn{background:var(--text);color:var(--bg);border:none;font-family:inherit;font-size:.85rem;font-weight:600;padding:.5rem .95rem;cursor:pointer;border-radius:8px;display:inline-flex;align-items:center;gap:.4rem;transition:opacity .15s}
+  .send-btn:hover{opacity:.85}
+  .send-btn:disabled{opacity:.4;cursor:not-allowed}
+  .dock-hint{text-align:center;font-size:.7rem;color:var(--text-faint);margin-top:.6rem;font-family:'JetBrains Mono',monospace;letter-spacing:.05em}
+
+  /* ── WRITE FORM ──────────────────────────────────────── */
+  .write-panel{display:none}
+  .write-types{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+  .wt{background:transparent;border:1px solid var(--border-2);color:var(--text-dim);font-family:inherit;font-size:.82rem;font-weight:500;cursor:pointer;padding:.45rem .9rem;border-radius:8px;transition:all .15s}
+  .wt:hover{border-color:var(--text-dim);color:var(--text)}
+  .wt.active{border-color:var(--text);color:var(--text);background:var(--bg-elev)}
+  .wfield{width:100%;background:var(--bg-elev);border:1px solid var(--border-2);color:var(--text);padding:.7rem .9rem;font-family:inherit;font-size:.92rem;margin-bottom:.5rem;outline:none;transition:border-color .15s;border-radius:8px}
+  .wfield:focus{border-color:var(--text)}
+  .wfield::placeholder{color:var(--text-faint)}
+  textarea.wfield{resize:vertical;min-height:80px;line-height:1.55}
+  select.wfield{cursor:pointer;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--text-faint) 50%),linear-gradient(135deg,var(--text-faint) 50%,transparent 50%);background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:1.75rem}
+  .write-submit{margin-top:.5rem;background:var(--text);color:var(--bg);border:none;font-family:inherit;font-size:.9rem;font-weight:600;padding:.7rem 1.5rem;cursor:pointer;border-radius:8px;transition:opacity .15s}
+  .write-submit:hover{opacity:.85}
+  .write-result{margin-top:1rem;font-size:.85rem;display:none;padding:.65rem .85rem;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);word-break:break-all;font-family:'JetBrains Mono',monospace}
+
+  /* ── MODAL ───────────────────────────────────────────── */
+  .modal-back{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);z-index:100;align-items:center;justify-content:center;padding:1.5rem}
+  .modal-back.show{display:flex}
+  :root[data-theme="light"] .modal-back{background:rgba(0,0,0,.35)}
+  .modal{background:var(--bg);border:1px solid var(--border-strong);max-width:760px;width:100%;max-height:85vh;display:flex;flex-direction:column;border-radius:10px;overflow:hidden}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
+  .modal-title{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text-dim);word-break:break-all}
+  .modal-close{background:none;border:none;color:var(--text-faint);font-size:1.4rem;cursor:pointer;font-family:inherit;line-height:1;padding:0 .25rem}
+  .modal-close:hover{color:var(--text)}
+  .modal-body{padding:1.25rem 1.5rem;overflow:auto;font-size:.88rem;line-height:1.7;color:var(--text-2);white-space:pre-wrap;flex:1;font-family:'JetBrains Mono',monospace}
+
+  /* Scrollbars (subtle) */
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--border-strong)}
 </style>
 </head>
 <body>
 
-<div class="top-right">
-  <div class="project" id="project-name">engram</div>
-  <div id="domain-label"></div>
-</div>
+<div class="app">
 
-<h1>// ENGRAM</h1>
-<p class="subtitle">local engineering memory — your project never forgets</p>
+  <header>
+    <div class="brand-row">
+      <button class="hamburger" onclick="toggleSidebar()">≡</button>
+      <div class="logo"><span class="dot"></span>Engram</div>
+    </div>
+    <div class="header-meta">
+      <span class="proj" id="project-name">engram</span>
+      <span class="domain" id="domain-label"></span>
+      <span class="mono" id="s-status" style="color:var(--text-faint);font-size:.75rem">·</span>
+      <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">◐</button>
+    </div>
+  </header>
 
-<div class="stats-bar">
-  <div><span>chunks </span><span class="val" id="s-chunks">—</span></div>
-  <div><span>collection </span><span class="val" id="s-col">—</span></div>
-  <div><span>model </span><span class="val" id="s-model">—</span></div>
-  <div><span>status </span><span class="val" id="s-status">loading</span></div>
-</div>
+  <aside class="sidebar" id="sidebar">
+    <div class="side-section">
+      <div class="side-label">Mode</div>
+      <div class="mode-list">
+        <button class="mode-item active" id="btn-ask" onclick="setMode('ask')"><span class="glyph">01</span>Ask</button>
+        <button class="mode-item"        id="btn-search" onclick="setMode('search')"><span class="glyph">02</span>Search</button>
+        <button class="mode-item"        id="btn-write"  onclick="setMode('write')"><span class="glyph">03</span>Write</button>
+      </div>
+    </div>
 
-<div class="mode-toggle">
-  <button class="mode-btn active" id="btn-ask"    onclick="setMode('ask')">ASK</button>
-  <button class="mode-btn"        id="btn-search" onclick="setMode('search')">SEARCH</button>
-  <button class="mode-btn"        id="btn-write"  onclick="setMode('write')">WRITE</button>
-</div>
+    <div class="side-section" id="filters-section">
+      <div class="side-label">Filter</div>
+      <div class="chips-stack" id="filter-chips">
+        <button class="chip active" id="chip-all" onclick="setSubsystem(null,this)">all</button>
+      </div>
+    </div>
 
-<!-- ASK / SEARCH bar -->
-<div class="search-bar" id="search-bar">
-  <input type="text" id="query" placeholder="What caused the servo to overheat?"
-    onkeydown="if(event.key==='Enter')doSubmit()"/>
-  <button class="go" onclick="doSubmit()">→</button>
-</div>
+    <div class="side-section">
+      <div class="side-label">Stats</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.7;color:var(--text-dim)">
+        <div>chunks <span style="color:var(--text)" id="s-chunks">—</span></div>
+        <div>model  <span style="color:var(--text)" id="s-model" style="font-size:.72rem">—</span></div>
+        <div>store  <span style="color:var(--text)" id="s-col">—</span></div>
+      </div>
+    </div>
 
-<!-- Subsystem filters -->
-<div class="filters" id="filters-row">
-  <span class="filter-label">filter:</span>
-  <button class="chip active" id="chip-all" onclick="setSubsystem(null,this)">all</button>
-  <span id="subsystem-chips"></span>
-</div>
+    <div class="side-section">
+      <div class="side-label">Recent</div>
+      <div id="recent-list"></div>
+    </div>
+  </aside>
 
-<!-- Answer box (ASK mode) -->
-<div class="answer-box" id="answer-box">
-  <div class="answer-label">// ANSWER</div>
-  <div class="answer-text" id="answer-text"></div>
-  <div class="answer-sources" id="answer-sources"></div>
-</div>
+  <div class="main">
+    <div class="scroll" id="scroll">
+      <div class="col">
+        <div id="hero" class="hero">
+          <h1 class="display">Your project<br>never forgets<span class="accent">.mem</span></h1>
+          <p>Ask Engram a question about your engineering history. Local vectors, grounded answers, zero cloud.</p>
 
-<!-- Search results -->
-<div class="results" id="results"></div>
+          <div class="note" id="mcp-banner">
+            <div class="body">
+              <span class="label">MCP</span>Plug Engram into Claude Desktop, Cursor, or Claude Code so it auto-queries and auto-writes project memory. See <a href="https://github.com/aryasgit/engram/tree/main/engram_mcp" target="_blank">engram_mcp/README.md</a>.
+            </div>
+            <button class="dismiss" onclick="dismissBanner()" title="hide">×</button>
+          </div>
 
-<!-- WRITE panel -->
-<div class="write-panel" id="write-panel">
-  <div class="write-header">// WRITE MEMORY</div>
-  <div class="write-types">
-    <button class="mode-btn active" id="wt-debug"      onclick="setWriteType('debug')">DEBUG SESSION</button>
-    <button class="mode-btn"        id="wt-decision"   onclick="setWriteType('decision')">DECISION</button>
-    <button class="mode-btn"        id="wt-experiment" onclick="setWriteType('experiment')">EXPERIMENT</button>
-    <button class="mode-btn"        id="wt-session"    onclick="setWriteType('session')">SESSION SUMMARY</button>
+          <div class="featured-label">starters</div>
+          <div class="starters" id="starters"></div>
+        </div>
+
+        <div class="conv" id="conv"></div>
+
+        <div class="write-panel" id="write-panel">
+          <div class="write-types">
+            <button class="wt active" id="wt-debug"      onclick="setWriteType('debug')">Debug Session</button>
+            <button class="wt"        id="wt-decision"   onclick="setWriteType('decision')">Decision</button>
+            <button class="wt"        id="wt-experiment" onclick="setWriteType('experiment')">Experiment</button>
+            <button class="wt"        id="wt-session"    onclick="setWriteType('session')">Session Summary</button>
+          </div>
+          <div id="write-form"></div>
+          <div class="write-result" id="write-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="dock-inner">
+        <div class="composer">
+          <textarea id="query" rows="1" placeholder="Ask anything about your project memory…"
+            oninput="autosize(this)"
+            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();doSubmit();}"></textarea>
+          <div class="composer-row">
+            <div class="composer-meta">
+              <select class="sub-select" id="dock-sub" onchange="setSubsystemValue(this.value)">
+                <option value="">all subsystems</option>
+              </select>
+              <span class="mono" id="mode-hint" style="color:var(--text-faint);font-size:.72rem">ask · grounded</span>
+            </div>
+            <button class="send-btn" id="send-btn" onclick="doSubmit()">Send →</button>
+          </div>
+        </div>
+        <div class="dock-hint">⏎ to send · ⇧⏎ for newline · esc to close preview</div>
+      </div>
+    </div>
   </div>
-  <div id="write-form"></div>
-  <div class="write-result" id="write-result"></div>
+</div>
+
+<div class="modal-back" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">note</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
 </div>
 
 <script>
@@ -120,134 +335,291 @@ var mode       = 'ask';
 var writeType  = 'debug';
 var activeSub  = null;
 var subsystems = [];
+var msgs       = [];
+
+var STARTERS = [
+  { tag:'DEBUG',    text:'What caused the servo to overheat?' },
+  { tag:'DECISIONS',text:'Why did we switch from Anthropic API to Ollama?' },
+  { tag:'HISTORY',  text:'Show me everything related to the IMU.' },
+  { tag:'RECENT',   text:'Summarise the last week of work.' },
+];
+
+// ── THEME / BANNER ───────────────────────────────────────
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  try{ localStorage.setItem('engram-theme', t); }catch(e){}
+}
+function toggleTheme(){
+  var cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+(function(){
+  try{ var s = localStorage.getItem('engram-theme'); if (s) applyTheme(s); }catch(e){}
+})();
+function dismissBanner(){
+  var el = document.getElementById('mcp-banner');
+  if (el) el.style.display = 'none';
+  try{ localStorage.setItem('engram-banner','hidden'); }catch(e){}
+}
+(function(){
+  try{ if (localStorage.getItem('engram-banner')==='hidden'){
+    var el = document.getElementById('mcp-banner'); if (el) el.style.display='none';
+  }}catch(e){}
+})();
+
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function autosize(ta){ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight, 200)+'px'; }
+function scrollBottom(){
+  var s = document.getElementById('scroll');
+  s.scrollTop = s.scrollHeight;
+}
+function timeAgo(epochSecs){
+  var s = Math.floor(Date.now()/1000 - epochSecs);
+  if (s < 60)    return s + 's';
+  if (s < 3600)  return Math.floor(s/60) + 'm';
+  if (s < 86400) return Math.floor(s/3600) + 'h';
+  return Math.floor(s/86400) + 'd';
+}
 
 // ── INIT ─────────────────────────────────────────────────
-async function init() {
-  try {
-    var st = await fetch('/stats').then(function(r){ return r.json(); });
-    document.getElementById('s-chunks').textContent = st.total_chunks != null ? st.total_chunks : '—';
-    document.getElementById('s-col').textContent    = st.collection  || '—';
-  } catch(e) {
-    console.error('stats failed', e);
-  }
-
-  try {
+async function init(){
+  renderStarters();
+  refreshStats();
+  try{
     var conf = await fetch('/config').then(function(r){ return r.json(); });
     document.getElementById('s-model').textContent  = conf.llm_model || '—';
-    document.getElementById('s-status').textContent = 'online';
+    document.getElementById('s-status').textContent = '● online';
     document.getElementById('project-name').textContent = conf.project || 'engram';
-    document.getElementById('domain-label').textContent = conf.domain  || '';
-
+    document.getElementById('domain-label').textContent = conf.domain ? ('/ ' + conf.domain) : '';
     subsystems = conf.subsystems || [];
-    var chipsEl = document.getElementById('subsystem-chips');
-    chipsEl.innerHTML = '';
-    subsystems.forEach(function(s) {
+    var chipsEl = document.getElementById('filter-chips');
+    chipsEl.innerHTML = '<button class="chip active" id="chip-all" onclick="setSubsystem(null,this)">all</button>';
+    subsystems.forEach(function(s){
       var b = document.createElement('button');
       b.className = 'chip';
       b.textContent = s;
       b.addEventListener('click', function(){ setSubsystem(s, b); });
       chipsEl.appendChild(b);
     });
-  } catch(e) {
-    console.error('config failed', e);
-    document.getElementById('s-status').textContent = 'error';
+    var sel = document.getElementById('dock-sub');
+    sel.innerHTML = '<option value="">all subsystems</option>';
+    subsystems.forEach(function(s){
+      var o = document.createElement('option'); o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+  }catch(e){
+    document.getElementById('s-status').textContent = '● error';
   }
+  refreshRecent();
 }
 
-// ── MODE SWITCHING ────────────────────────────────────────
-function setMode(m) {
+function refreshStats(){
+  fetch('/stats').then(function(r){ return r.json(); }).then(function(d){
+    document.getElementById('s-chunks').textContent = d.total_chunks != null ? d.total_chunks : '—';
+    document.getElementById('s-col').textContent    = d.collection || '—';
+  }).catch(function(){});
+}
+
+async function refreshRecent(){
+  var el = document.getElementById('recent-list');
+  el.innerHTML = '<div class="recent-meta">loading…</div>';
+  try{
+    var d = await fetch('/memory/recent?limit=8').then(function(r){ return r.json(); });
+    if (!d.notes.length){ el.innerHTML = '<div class="recent-meta">vault empty</div>'; return; }
+    el.innerHTML = d.notes.map(function(n){
+      return '<div class="recent-item" data-path="'+esc(n.path)+'">'+
+               '<div class="recent-name">'+esc(n.name)+'</div>'+
+               '<div class="recent-meta">'+esc(n.folder)+' · '+timeAgo(n.mtime)+' ago</div>'+
+             '</div>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.recent-item'), function(node){
+      node.addEventListener('click', function(){
+        var p = node.getAttribute('data-path');
+        if (p) openNote(p);
+      });
+    });
+  }catch(e){ el.innerHTML = '<div class="recent-meta">error</div>'; }
+}
+
+function renderStarters(){
+  var el = document.getElementById('starters');
+  el.innerHTML = STARTERS.map(function(s,i){
+    return '<button class="starter" data-q="'+esc(s.text)+'">'+
+             '<div class="tag">fig.'+(i+1)+' / '+esc(s.tag)+'</div>'+
+             '<div class="text">'+esc(s.text)+'</div>'+
+           '</button>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('.starter'), function(btn){
+    btn.addEventListener('click', function(){
+      var q = btn.getAttribute('data-q');
+      var ta = document.getElementById('query');
+      ta.value = q;
+      autosize(ta);
+      doSubmit();
+    });
+  });
+}
+
+// ── MODE ─────────────────────────────────────────────────
+function setMode(m){
   mode = m;
   ['ask','search','write'].forEach(function(x){
     document.getElementById('btn-'+x).classList.toggle('active', x===m);
   });
-
   var isWrite = m === 'write';
-  document.getElementById('search-bar').style.display  = isWrite ? 'none' : 'flex';
-  document.getElementById('filters-row').style.display = isWrite ? 'none' : 'flex';
-  document.getElementById('answer-box').style.display  = 'none';
-  document.getElementById('results').innerHTML         = '';
+  document.getElementById('dock').style.display    = isWrite ? 'none' : 'block';
   document.getElementById('write-panel').style.display = isWrite ? 'block' : 'none';
-  document.getElementById('write-result').style.display = 'none';
-
-  if (!isWrite) {
-    document.getElementById('query').placeholder =
-      m === 'ask' ? 'What caused the servo to overheat?' : 'servo overheating gait backward';
-  } else {
-    renderWriteForm();
-  }
+  document.getElementById('hero').style.display    = (isWrite || msgs.length) ? 'none' : 'block';
+  document.getElementById('conv').style.display    = isWrite ? 'none' : (msgs.length ? 'flex' : 'none');
+  document.getElementById('filters-section').style.display = isWrite ? 'none' : 'block';
+  var hint = document.getElementById('mode-hint');
+  if (hint) hint.textContent = m === 'ask' ? 'ask · grounded' : 'search · raw chunks';
+  var ph = document.getElementById('query');
+  if (ph) ph.placeholder = m === 'ask'
+    ? 'Ask anything about your project memory…'
+    : 'Search by keywords or symptoms…';
+  if (isWrite){ renderWriteForm(); }
 }
 
-// ── SUBSYSTEM FILTER ──────────────────────────────────────
-function setSubsystem(s, el) {
+function setSubsystem(s, el){
   activeSub = s;
-  document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+  document.querySelectorAll('.chips-stack .chip').forEach(function(c){ c.classList.remove('active'); });
   el.classList.add('active');
+  var sel = document.getElementById('dock-sub');
+  if (sel) sel.value = s || '';
+}
+function setSubsystemValue(v){
+  activeSub = v || null;
+  document.querySelectorAll('.chips-stack .chip').forEach(function(c){
+    c.classList.toggle('active', (c.id==='chip-all' && !v) || c.textContent===v);
+  });
 }
 
-// ── ASK / SEARCH ──────────────────────────────────────────
-async function doSubmit() {
-  var q = document.getElementById('query').value.trim();
+// ── SUBMIT ───────────────────────────────────────────────
+function skeleton(){
+  return '<div class="skel"><div class="skel-row"></div><div class="skel-row"></div><div class="skel-row"></div><div class="skel-row"></div></div>';
+}
+
+async function doSubmit(){
+  var ta = document.getElementById('query');
+  var q  = (ta.value||'').trim();
   if (!q) return;
+  document.getElementById('hero').style.display = 'none';
+  document.getElementById('conv').style.display = 'flex';
 
-  var resultsEl = document.getElementById('results');
-  var answerBox = document.getElementById('answer-box');
-  resultsEl.innerHTML = '<div class="loading">searching memory...</div>';
-  answerBox.style.display = 'none';
+  msgs.push({role:'user', text:q});
+  var pending = {role:'engram', text:'', loading:true};
+  msgs.push(pending);
+  renderConv();
+  scrollBottom();
 
-  try {
-    if (mode === 'ask') {
+  ta.value = '';
+  autosize(ta);
+
+  try{
+    if (mode === 'ask'){
       var r = await fetch('/ask', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({question: q, top_k: 5, subsystem: activeSub})
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({question:q, top_k:5, subsystem:activeSub})
       });
       var d = await r.json();
-      answerBox.style.display = 'block';
-      document.getElementById('answer-text').textContent    = d.answer;
-      document.getElementById('answer-sources').textContent =
-        'sources: ' + d.sources.join(', ') + '  ·  ' + d.chunks_used + ' chunks used';
-      renderChunks(d.raw_chunks || []);
+      pending.text    = d.answer || '(no answer)';
+      pending.sources = d.sources || [];
+      pending.chunks  = d.raw_chunks || [];
+      pending.chunksUsed = d.chunks_used || 0;
     } else {
       var r2 = await fetch('/query', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({query: q, top_k: 10, subsystem: activeSub})
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:q, top_k:10, subsystem:activeSub})
       });
       var d2 = await r2.json();
-      renderChunks(d2.results);
+      pending.text    = '';
+      pending.chunks  = d2.results || [];
+      pending.sources = [];
     }
-  } catch(e) {
-    resultsEl.innerHTML = '<div class="empty">error: ' + e.message + '</div>';
+  }catch(e){
+    pending.text = 'error: ' + e.message;
+    pending.error = true;
   }
-
-  fetch('/stats').then(function(r){ return r.json(); }).then(function(d){
-    document.getElementById('s-chunks').textContent = d.total_chunks;
-  }).catch(function(){});
+  pending.loading = false;
+  renderConv();
+  scrollBottom();
+  refreshStats();
 }
 
-function renderChunks(chunks) {
-  var el = document.getElementById('results');
-  if (!chunks || !chunks.length) {
-    el.innerHTML = '<div class="empty">no results found</div>';
-    return;
-  }
-  el.innerHTML = chunks.map(function(c) {
-    return '<div class="chunk">' +
-      '<div class="chunk-meta">' +
-        '<span class="score">'    + c.score       + '</span>' +
-        '<span class="subsystem">'+ c.subsystem   + '</span>' +
-        '<span class="mtype">'    + c.memory_type + '</span>' +
-        '<span class="docname">'  + c.doc_name    + '</span>' +
-      '</div>' +
-      '<div class="chunk-text">' +
-        c.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
-      '</div>' +
-    '</div>';
+function renderConv(){
+  var el = document.getElementById('conv');
+  el.innerHTML = msgs.map(function(m){
+    if (m.role === 'user'){
+      return '<div class="msg user">'+
+               '<div class="role">You</div>'+
+               '<div class="bubble">'+ esc(m.text) +'</div>'+
+             '</div>';
+    }
+    // engram
+    var body = '';
+    if (m.loading){
+      body = skeleton();
+    } else {
+      if (m.text){
+        body += '<div class="bubble">'+ esc(m.text) +'</div>';
+      }
+      if (m.chunks && m.chunks.length){
+        body += '<div class="chunks">'+
+          m.chunks.map(function(c){
+            return '<div class="chunk" data-src="'+esc(c.source||'')+'">'+
+              '<div class="chunk-meta">'+
+                '<span class="score">'+esc(c.score)+'</span>'+
+                '<span class="pill">'+esc(c.subsystem)+'</span>'+
+                '<span class="pill">'+esc(c.memory_type)+'</span>'+
+                '<span class="doc">'+esc(c.doc_name)+'</span>'+
+              '</div>'+
+              '<div class="chunk-text">'+esc(c.text)+'</div>'+
+            '</div>';
+          }).join('')+
+        '</div>';
+      } else if (!m.text){
+        body = '<div class="empty">no results found</div>';
+      }
+      if (m.sources && m.sources.length){
+        body += '<div class="sources">sources · '+ esc(m.sources.join(', ')) +' · '+ (m.chunksUsed||0) +' chunks</div>';
+      }
+    }
+    return '<div class="msg engram">'+
+             '<div class="role">Engram</div>'+
+             body +
+           '</div>';
   }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('.chunk'), function(node){
+    node.addEventListener('click', function(){
+      var src = node.getAttribute('data-src');
+      if (src) openNote(src);
+    });
+  });
 }
 
-// ── WRITE MODE ────────────────────────────────────────────
-function setWriteType(t) {
+// ── NOTE PREVIEW ─────────────────────────────────────────
+async function openNote(path){
+  var modal = document.getElementById('modal');
+  document.getElementById('modal-title').textContent = path;
+  document.getElementById('modal-body').textContent = 'loading…';
+  modal.classList.add('show');
+  try{
+    var d = await fetch('/memory/note?path=' + encodeURIComponent(path)).then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status); return r.json();
+    });
+    document.getElementById('modal-body').textContent = d.content;
+  }catch(e){
+    document.getElementById('modal-body').textContent = 'error: ' + e.message;
+  }
+}
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+
+// ── WRITE ────────────────────────────────────────────────
+function setWriteType(t){
   writeType = t;
   ['debug','decision','experiment','session'].forEach(function(x){
     document.getElementById('wt-'+x).classList.toggle('active', x===t);
@@ -255,112 +627,66 @@ function setWriteType(t) {
   document.getElementById('write-result').style.display = 'none';
   renderWriteForm();
 }
-
-function subSelect() {
-  var opts = subsystems.map(function(s){
-    return '<option value="'+s+'">'+s+'</option>';
-  }).join('');
-  return '<select class="wfield" id="w-sub"><option value="unknown">subsystem...</option>' + opts + '</select>';
+function subSelect(){
+  var opts = subsystems.map(function(s){ return '<option value="'+esc(s)+'">'+esc(s)+'</option>'; }).join('');
+  return '<select class="wfield" id="w-sub"><option value="unknown">subsystem…</option>'+opts+'</select>';
 }
-
-function renderWriteForm() {
+function renderWriteForm(){
   var f = document.getElementById('write-form');
   var t = writeType;
-
-  if (t === 'debug') {
+  if (t === 'debug'){
     f.innerHTML =
-      '<input  class="wfield" id="w-title"   placeholder="Title (e.g. RR Wrist Overheating)"/>' +
+      '<input class="wfield" id="w-title" placeholder="Title (e.g. RR Wrist Overheating)"/>' +
       '<textarea class="wfield" id="w-symptom" placeholder="Symptom — what happened?"></textarea>' +
-      '<textarea class="wfield" id="w-cause"   placeholder="Cause (optional)"></textarea>' +
-      '<textarea class="wfield" id="w-fix"     placeholder="Fix applied (optional)"></textarea>' +
+      '<textarea class="wfield" id="w-cause" placeholder="Cause (optional)"></textarea>' +
+      '<textarea class="wfield" id="w-fix" placeholder="Fix applied (optional)"></textarea>' +
       subSelect() +
-      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
-
-  } else if (t === 'decision') {
+      '<button class="write-submit" onclick="submitWrite()">Save to memory →</button>';
+  } else if (t === 'decision'){
     f.innerHTML =
-      '<input  class="wfield" id="w-title"    placeholder="Decision title"/>' +
+      '<input class="wfield" id="w-title" placeholder="Decision title"/>' +
       '<textarea class="wfield" id="w-decision" placeholder="What was decided?"></textarea>' +
-      '<textarea class="wfield" id="w-reason"   placeholder="Why? What trade-offs?"></textarea>' +
+      '<textarea class="wfield" id="w-reason" placeholder="Why? What trade-offs?"></textarea>' +
       subSelect() +
-      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
-
-  } else if (t === 'experiment') {
+      '<button class="write-submit" onclick="submitWrite()">Save to memory →</button>';
+  } else if (t === 'experiment'){
     f.innerHTML =
-      '<input  class="wfield" id="w-title"      placeholder="Experiment title"/>' +
+      '<input class="wfield" id="w-title" placeholder="Experiment title"/>' +
       '<textarea class="wfield" id="w-hypothesis" placeholder="Hypothesis"></textarea>' +
-      '<textarea class="wfield" id="w-result"     placeholder="Result"></textarea>' +
+      '<textarea class="wfield" id="w-result" placeholder="Result"></textarea>' +
       '<textarea class="wfield" id="w-conclusion" placeholder="Conclusion"></textarea>' +
       subSelect() +
-      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
-
-  } else if (t === 'session') {
+      '<button class="write-submit" onclick="submitWrite()">Save to memory →</button>';
+  } else if (t === 'session'){
     f.innerHTML =
-      '<textarea class="wfield" id="w-summary" style="min-height:120px" ' +
+      '<textarea class="wfield" id="w-summary" style="min-height:140px" ' +
         'placeholder="What did you work on today? What broke? What was fixed? What did you decide?"></textarea>' +
       subSelect() +
-      '<button class="go" onclick="submitWrite()" style="margin-top:.6rem;width:100%">SAVE TO MEMORY →</button>';
+      '<button class="write-submit" onclick="submitWrite()">Save to memory →</button>';
   }
 }
-
-function gv(id) {
-  var el = document.getElementById(id);
-  return el ? el.value : '';
-}
-
-async function submitWrite() {
-  var sub    = gv('w-sub') || 'unknown';
-  var resEl  = document.getElementById('write-result');
-  var t      = writeType;
-  var endpoint, body;
-
-  if (t === 'debug') {
-    endpoint = '/memory/debug';
-    body = { title: gv('w-title'), symptom: gv('w-symptom'),
-             cause: gv('w-cause'), fix: gv('w-fix'),
-             subsystem: sub, tags: [], status: 'open' };
-
-  } else if (t === 'decision') {
-    endpoint = '/memory/decision';
-    body = { title: gv('w-title'), decision: gv('w-decision'),
-             reasoning: gv('w-reason'), subsystem: sub, tags: [] };
-
-  } else if (t === 'experiment') {
-    endpoint = '/memory/experiment';
-    body = { title: gv('w-title'), hypothesis: gv('w-hypothesis'),
-             result: gv('w-result'), conclusion: gv('w-conclusion'),
-             subsystem: sub, tags: [] };
-
-  } else if (t === 'session') {
-    endpoint = '/memory/session';
-    body = { summary: gv('w-summary'), subsystem: sub };
-  }
-
-  resEl.style.display = 'block';
-  resEl.style.color   = '#555';
-  resEl.textContent   = 'saving...';
-
-  try {
-    var r = await fetch(endpoint, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
+function gv(id){ var el=document.getElementById(id); return el?el.value:''; }
+async function submitWrite(){
+  var sub = gv('w-sub') || 'unknown';
+  var resEl = document.getElementById('write-result');
+  var t = writeType, endpoint, body;
+  if (t==='debug'){ endpoint='/memory/debug'; body={title:gv('w-title'),symptom:gv('w-symptom'),cause:gv('w-cause'),fix:gv('w-fix'),subsystem:sub,tags:[],status:'open'};}
+  else if (t==='decision'){ endpoint='/memory/decision'; body={title:gv('w-title'),decision:gv('w-decision'),reasoning:gv('w-reason'),subsystem:sub,tags:[]};}
+  else if (t==='experiment'){ endpoint='/memory/experiment'; body={title:gv('w-title'),hypothesis:gv('w-hypothesis'),result:gv('w-result'),conclusion:gv('w-conclusion'),subsystem:sub,tags:[]};}
+  else if (t==='session'){ endpoint='/memory/session'; body={summary:gv('w-summary'),subsystem:sub};}
+  resEl.style.display='block';
+  resEl.textContent='saving…';
+  try{
+    var r = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     var d = await r.json();
-    resEl.style.color   = '#00ff88';
-    resEl.textContent   = '✅ saved → ' + d.path;
-
-    // refresh chunk count
-    fetch('/stats').then(function(r){ return r.json(); }).then(function(d){
-      document.getElementById('s-chunks').textContent = d.total_chunks;
-    }).catch(function(){});
-
-  } catch(e) {
-    resEl.style.color = '#ff4444';
-    resEl.textContent = 'error: ' + e.message;
+    resEl.textContent = 'saved → '+d.path;
+    refreshStats(); refreshRecent();
+  }catch(e){
+    resEl.style.color='var(--error)';
+    resEl.textContent='error: '+e.message;
   }
 }
 
-// ── START ─────────────────────────────────────────────────
 init();
 </script>
 </body>
