@@ -1,329 +1,266 @@
 <div align="center">
 
 ```
-███████╗███╗   ██╗ ██████╗ ██████╗  █████╗ ███╗   ███╗
-██╔════╝████╗  ██║██╔════╝ ██╔══██╗██╔══██╗████╗ ████║
-█████╗  ██╔██╗ ██║██║  ███╗██████╔╝███████║██╔████╔██║
-██╔══╝  ██║╚██╗██║██║   ██║██╔══██╗██╔══██║██║╚██╔╝██║
-███████╗██║ ╚████║╚██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║
-╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝
+███╗   ███╗███████╗███╗   ███╗ ██████╗ ██████╗ ███╗   ██╗
+████╗ ████║██╔════╝████╗ ████║██╔════╝██╔═══██╗████╗  ██║
+██╔████╔██║█████╗  ██╔████╔██║██║     ██║   ██║██╔██╗ ██║
+██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║██║     ██║   ██║██║╚██╗██║
+██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║╚██████╗╚██████╔╝██║ ╚████║
+╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝
 ```
 
+**Memory Context for Claude.**
 **Your project never forgets.**
 
-A local-first, free, persistent engineering memory system.  
-Turns your notes, commits, debugging sessions, and experiments  
-into a searchable, queryable knowledge base — powered entirely  
-by open source tools running on your own machine.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-00ff88.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-00ff88.svg)](https://python.org)
-[![Local First](https://img.shields.io/badge/runs-100%25%20local-00ff88.svg)]()
-[![Zero API Cost](https://img.shields.io/badge/API%20cost-zero-00ff88.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-000.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-000.svg)](https://python.org)
+[![Local First](https://img.shields.io/badge/runs-100%25%20local-000.svg)]()
+[![MCP Ready](https://img.shields.io/badge/MCP-ready-000.svg)]()
 
 </div>
 
 ---
 
-## What is Engram?
+## What Memcon does in one paragraph
 
-Engram is a **persistent engineering memory system** built for engineers working on complex, long-running projects — robotics, hardware, game development, research, or any deep technical work.
-
-It solves a problem every engineer faces: *you forget things.* Debugging sessions from 3 months ago. Why a specific architectural decision was made. What that weird IMU error was and how you fixed it. What commit introduced the gait regression.
-
-Engram captures everything — notes, commits, logs, experiments — embeds them as vectors, and makes them queryable in plain English. Ask it a question. Get a grounded answer from your own engineering history.
-
-**Everything runs on your machine. No cloud. No API costs. No data leaves your computer. Ever.**
-
-> **New:** Engram also runs as an **MCP server** so Claude (Desktop / Cursor /
-> Code) can auto-query your memory before answering and auto-write debug
-> sessions after solving a problem — no manual note-taking. See
-> [engram_mcp/README.md](engram_mcp/README.md).
+Memcon (**Mem**ory **Con**text) is a local, persistent memory layer that plugs
+straight into Claude. Wire it up once and **Claude auto-queries your project
+history before answering and auto-writes new debugging sessions, decisions, and
+experiments after solving them** — no copy-paste, no manual note-taking. The
+vault grows itself while you work. Nothing leaves your machine.
 
 ---
 
-## How It Works
+## The MCP loop — this is the whole point
 
 ```
-You write a note in Obsidian
-          │
-          ▼
-  watcher.py detects save
-          │
-          ▼
-  chunker.py splits content
-  into semantic chunks
-          │
-          ▼
-  embedder.py converts chunks
-  to 384-dim vectors via
-  all-MiniLM-L6-v2 (local)
-          │
-          ▼
-  Qdrant stores vectors +
-  metadata (subsystem, memory
-  type, tags, source)
-          │
-          ▼
-  Instantly queryable via
-  /query (semantic search) or
-  /ask (LLM-grounded answer)
+┌──────────────────────────────────────────────────────────────┐
+│  You: "Why is the RR wrist servo overheating again?"         │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+      Claude calls memcon_query("RR wrist servo overheating")
+                              │
+                              ▼
+   Memcon embeds the query, looks up the top-5 most similar
+   chunks from your vault — not the whole memory, only what
+   semantically matches the symptoms.
+                              │
+                              ▼
+   Claude answers grounded in YOUR history — not hallucinated.
+                              │
+                              ▼
+      You confirm the fix. Claude calls memcon_write_debug(
+         title, symptom, cause, fix, subsystem="servo")
+                              │
+                              ▼
+   A new markdown note lands in vault/debugging/. The Obsidian
+   watcher picks it up, embeds it, stores it. Searchable forever.
 ```
 
-When you ask a question:
+That's it. That's the product.
 
-```
-Your question
-     │
-     ▼
-Embedded to vector
-     │
-     ▼
-Qdrant finds top-k
-most similar chunks
-     │
-     ▼
-Chunks injected into
-LLM prompt as context
-     │
-     ▼
-Local LLM (Ollama) answers
-grounded in YOUR memory
-     │
-     ▼
-Answer + sources returned
-```
+The MCP server is a thin process Claude Desktop / Cursor / Claude Code spawns
+on demand over stdio. **It runs entirely on your machine. Zero cloud, zero API
+cost, zero hosting.** You add 6 lines to a config file, restart Claude, and
+suddenly Claude has reliable long-term memory of your project.
+
+See [`memcon_mcp/README.md`](memcon_mcp/README.md) for the full tool catalogue
+and per-client setup snippets.
 
 ---
 
-## What Makes It Special
+## Install (the easy way)
 
-### 1. 100% Local, 100% Free — Forever
-No OpenAI API key. No Pinecone. No cloud sync. No subscriptions.  
-Qdrant runs in Docker on your machine. The embedding model (`all-MiniLM-L6-v2`) is downloaded once (~90MB). The LLM runs via Ollama. Everything is on-device. The total recurring cost is exactly $0.
-
-### 2. Engineered Memory Taxonomy
-Engram distinguishes between four types of engineering memory:
-
-| Type | What it stores |
-|---|---|
-| **Episodic** | Debugging sessions, incidents, experiments — *things that happened* |
-| **Semantic** | Facts, specs, hardware reference — *things you know* |
-| **Procedural** | Calibration steps, wiring procedures, SOPs — *how to do things* |
-| **Causal** | Root cause analyses, failure chains — *why things happened* |
-
-This taxonomy makes retrieval dramatically more precise than keyword search.
-
-### 3. Automatic Ingestion Pipeline
-Write a note. Save it. Done. The file watcher detects the save, chunks the content, embeds it, and stores it in under a second. Your vault is always current — no manual sync, no batch jobs.
-
-### 4. Semantic Search, Not Keyword Search
-You don't need to remember exact words. Ask *"what caused that weird motor error last month"* — Engram finds the relevant debugging note even if your note says *"servo torque loss"* not *"motor error"*. Meaning is matched, not strings.
-
-### 5. Git Commit Memory
-Every commit in your project repo becomes a searchable memory. Ask *"when did we change the IK solver?"* and get the exact commit. Engineering history becomes queryable.
-
-### 6. Domain-Configurable
-One config file (`engram.config.yaml`) adapts Engram to any project type. Subsystems, memory types, vault structure, and LLM model are all configurable. Built-in templates for robotics, game development, and research.
-
-### 7. Web Dashboard
-A clean, local web UI at `localhost:8000/ui`. Search, filter by subsystem, switch between raw semantic search and LLM-grounded answers. No npm, no build step — single HTML file served by FastAPI.
-
-### 8. MCP Server — Claude Plugs Straight In
-Engram ships with a **Model Context Protocol** server. Wire it into Claude
-Desktop, Cursor, or Claude Code once and Claude will:
-
-- **Auto-query** Engram before answering project questions — only the
-  symptom-relevant chunks come back, not the whole vault. Think hashmap
-  lookup keyed by meaning.
-- **Auto-write** debug sessions, decisions, and experiments after solving a
-  problem — no copy-paste, the vault grows itself.
-
-How it works in practice:
-
-```
-You: "Why is the RR wrist overheating again?"
-        │
-        ▼
-Claude calls engram_query("RR wrist overheating servo")
-        │
-        ▼
-Engram returns top-5 chunks from past debug notes
-        │
-        ▼
-Claude answers grounded in YOUR project history (not hallucinated)
-        │
-        ▼
-After you confirm the fix:
-Claude calls engram_write_debug(title, symptom, cause, fix, subsystem="servo")
-        │
-        ▼
-New note saved → re-ingested → searchable next session
-```
-
-The MCP server is a thin process spawned on demand by Claude Desktop / Cursor
-/ Claude Code over stdio. It runs entirely on your machine, never talks to
-the cloud, and exposes nine tools — `engram_query`, `engram_ask`,
-`engram_write_debug`, `engram_write_decision`, `engram_write_experiment`,
-`engram_session_summary`, `engram_update_note`, `engram_stats`,
-`engram_subsystems`. See [engram_mcp/README.md](engram_mcp/README.md) for
-one-step Claude Desktop / Cursor / Claude Code config.
-
----
-
-## Demo
-
-```
-Query: "why did the servo overheat"
-
-// ANSWER
-The RR wrist servo overheated due to torque loss and snap to default
-angle during backward gait. This was likely caused by vibration-loosened
-wiring or a power brownout from servo current spikes.
-
-sources: i2c_oserror, rr_wrist_overheating · 5 chunks used
-```
-
----
-
-## Requirements
-
-| Requirement | Version |
-|---|---|
-| Python | 3.10+ |
-| Docker | Any recent version |
-| RAM | 8GB minimum, 16GB recommended |
-| Storage | ~3GB (models + DB) |
-| OS | macOS, Linux |
-
-> **Recommended hardware:** Apple Silicon Mac (M1/M2/M3/M4) or any machine with 16GB RAM for best local LLM performance.
-
----
-
-## Quick Start
-
-### One-liner (macOS / Linux / WSL)
+### One-liner — macOS / Linux / WSL
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/aryasgit/engram/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash
 ```
 
-Clones the repo to `~/engram` and runs the installer. Override the
-destination with `ENGRAM_DIR=/path/to/dir` and the branch with `ENGRAM_REF=...`.
+Clones into `~/memcon`, installs deps, picks the right LLM for your RAM,
+pulls it via Ollama, starts Qdrant, and ingests the starter vault. Takes 5–10
+minutes the first time (model download is the slow part).
 
-### Docker-only mode (no local Python)
+Overrides:
+```bash
+# Custom install path
+MEMCON_DIR=/opt/memcon curl -fsSL ... | bash
+# Force a specific model
+MEMCON_MODEL=qwen2.5-coder:14b curl -fsSL ... | bash
+```
+
+### No-Python mode — Docker only
 
 If you'd rather not touch a Python venv:
 
 ```bash
-git clone https://github.com/aryasgit/engram.git && cd engram
+git clone https://github.com/aryasgit/memcon.git && cd memcon
 docker compose -f docker-compose.full.yml up -d --build
 open http://localhost:8000/ui
 ```
 
-Runs Qdrant + the Engram API + the vault watcher all in containers. You still
-need Ollama installed on the host machine (Engram reaches it via
-`host.docker.internal`).
+Runs Qdrant + the API + the vault watcher as containers. You still need
+Ollama on the host (Memcon reaches it via `host.docker.internal`).
 
----
-
-## Manual install (macOS)
-### 1. Clone
+### Manual (macOS)
 
 ```bash
-git clone https://github.com/aryasgit/engram.git
-cd engram
+git clone https://github.com/aryasgit/memcon.git
+cd memcon
+./install.sh
+./start.sh
+open http://localhost:8000/ui
 ```
 
-### 2. Install
+### Manual (Windows)
+
+Use WSL (recommended) or Git Bash:
 
 ```bash
+# inside Ubuntu WSL
+git clone https://github.com/aryasgit/memcon.git
+cd memcon
 ./install.sh
 ```
 
-This single script will:
-- Check for Docker, Python 3, and Ollama (installs Ollama if missing)
-- Create a Python virtual environment
-- Install all Python dependencies
-- Pull the local LLM model (`qwen2.5-coder:7b` by default, ~5GB)
-- Start Qdrant vector database
-- Create your vault folder structure
-- Run the initial ingest
-
-> First run takes 5–10 minutes depending on your internet speed (model download). Subsequent starts are instant.
-
-### 3. Start
-
-```bash
-./start.sh
-```
-
-### 4. Open the dashboard
-
-```
-http://localhost:8000/ui
-```
-
-### 5. Start writing notes
-
-Point **Obsidian** at the `vault/` folder:  
-Obsidian → Open folder as vault → select `engram/vault/`
-
-Every note you save is automatically ingested into memory.
+`install.bat` + `start.bat` also exist if you want to skip WSL entirely.
+Docker Desktop must be running either way.
 
 ---
-## Manual install (Windows)
-Windows does not run `.sh` scripts natively. Two options:
 
-### Option A — WSL (Recommended)
-1. Install WSL: open PowerShell as admin and run:
-   wsl --install
-2. Restart, open Ubuntu terminal
-3. Clone engram inside WSL:
-```bash
-   git clone https://github.com/aryasgit/engram.git
-   cd engram
-   ./install.sh
+## Wire Memcon into Claude
+
+### Claude Desktop
+
+1. Start Memcon: `cd ~/memcon && docker compose up -d`
+2. Open `~/Library/Application Support/Claude/claude_desktop_config.json`
+   (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
+3. Merge this into the `mcpServers` block:
+
+   ```json
+   {
+     "mcpServers": {
+       "memcon": {
+         "command": "/ABSOLUTE/PATH/TO/memcon/.venv/bin/python3",
+         "args": ["-m", "memcon_mcp.server"],
+         "cwd": "/ABSOLUTE/PATH/TO/memcon"
+       }
+     }
+   }
+   ```
+
+4. Restart Claude Desktop. `memcon` should now appear in the tool menu.
+5. Ask Claude *"use memcon to check what we know about servo overheating."*
+
+### Cursor
+
+Add the same block to `~/.cursor/mcp.json`. Restart Cursor.
+
+### Claude Code
+
+Add the same block to `~/.claude/settings.json` (or a project-level
+`.claude/settings.json`).
+
+### Reliable auto-triggering
+
+Claude has to *decide* to call the tools. To make that reflex automatic, paste
+this into Claude's project memory:
+
+> You have access to the `memcon_*` MCP tools. Before answering any question
+> about this project, call `memcon_query` with the user's symptoms/keywords
+> and use the returned chunks as authoritative context. After solving a
+> problem, call `memcon_write_debug` (or `_decision` / `_experiment`) so the
+> resolution persists. At the end of a session, call `memcon_session_summary`.
+> Do not invent project details that are not in the returned chunks.
+
+---
+
+## Hardware → model auto-pick
+
+`install.sh` detects RAM and writes the right model into `memcon.config.yaml`:
+
+| RAM | Model | Notes |
+|---|---|---|
+| 64GB+ | `qwen2.5-coder:32b` | Flagship — best memory tracking |
+| 32–64GB | `qwen2.5-coder:14b` | Strong technical reasoning |
+| 16–32GB | `qwen2.5-coder:7b` | Solid default |
+| 8–16GB | `qwen2.5-coder:3b` | Balanced |
+| <8GB | `llama3.2:1b` | Lightweight |
+
+Override at install time with `MEMCON_MODEL=qwen2.5:72b ./install.sh`.
+
+---
+
+## What's inside
+
+```
+memcon/
+├── memcon.config.yaml         ← master configuration
+├── config.py                  ← yaml loader
+│
+├── memcon_mcp/                ← MCP server (the headline)
+│   ├── server.py              ← 9 tools over stdio
+│   └── README.md              ← per-client setup
+│
+├── api/
+│   ├── main.py                ← FastAPI: /ask /query /memory/* /ingest /ui
+│   └── ui.html                ← Claude-style chat dashboard
+│
+├── ingestion/
+│   ├── chunker.py             ← markdown → semantic chunks
+│   ├── embedder.py            ← all-MiniLM-L6-v2 (local, 90MB)
+│   ├── ingest.py              ← chunk → embed → upsert
+│   └── watcher.py             ← auto-ingest on Obsidian save
+│
+├── memory/
+│   ├── qdrant_store.py        ← Qdrant client
+│   ├── retrieve.py            ← semantic search
+│   └── writer.py              ← programmatic note creation
+│
+├── vault/                     ← YOUR notes — open this in Obsidian
+│   ├── debugging/
+│   ├── decisions/
+│   ├── experiments/
+│   └── …
+│
+├── scripts/
+│   ├── ingest_all.py          ← bulk ingest the vault
+│   └── ingest_git.py          ← ingest git commit history
+│
+├── bootstrap.sh               ← curl one-liner installer
+├── install.sh / install.bat   ← per-OS installers
+├── start.sh / stop.sh         ← lifecycle scripts
+├── Dockerfile                 ← container image
+├── docker-compose.yml         ← Qdrant only
+└── docker-compose.full.yml    ← Qdrant + API (no-Python mode)
 ```
 
-### Option B — Git Bash
-1. Install [Git for Windows](https://git-scm.com/download/win)
-2. Right-click the engram folder → "Git Bash Here"
-3. Run `./install.sh`
-> Docker Desktop for Windows must be installed and running in both cases.
+---
 
-## Manual Start (if you prefer)
+## Stack
 
-```bash
-# Terminal 1 — Qdrant (run once, keeps data across restarts)
-docker compose up -d
-
-# Terminal 2 — API + LLM
-source .venv/bin/activate
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-
-# Terminal 3 — Vault watcher (auto-ingests on save)
-source .venv/bin/activate
-python3 ingestion/watcher.py vault/
-```
-
-### Stop everything
-
-```bash
-./stop.sh
-```
+| Layer | Tool | Why |
+|---|---|---|
+| Vector DB | Qdrant (Docker) | Best local vector DB, free, persistent |
+| Embeddings | all-MiniLM-L6-v2 | 384-dim, ~90MB, no API needed |
+| Local LLM | Ollama + Qwen2.5-Coder | Free, runs on Apple Silicon / CUDA / CPU |
+| API | FastAPI + uvicorn | Async, auto OpenAPI docs |
+| Notes | Obsidian → `vault/` | Best local markdown app |
+| Watcher | Python watchdog | Auto-ingest on save |
+| MCP | `mcp` Python SDK | Official Anthropic SDK, stdio transport |
 
 ---
 
 ## Configuration
 
-All configuration lives in one file: `engram.config.yaml`
+Everything in one file: `memcon.config.yaml`
 
 ```yaml
 project:
-  name: "My Project"
-  description: "What you're building"
-  domain: "robotics"          # robotics | gamedev | research | software
+  name: "BARQ"               # change for your project
+  description: "..."
+  domain: "robotics"
 
 vault:
   path: "./vault"
@@ -332,13 +269,13 @@ vault:
   min_chunk_length: 30
 
 memory:
-  collection: "engram_memory"
+  collection: "memcon_memory"
   embedding_model: "all-MiniLM-L6-v2"
   vector_dim: 384
 
 llm:
   provider: "ollama"
-  model: "qwen2.5-coder:7b"  # change this to any Ollama model
+  model: "qwen2.5-coder:7b"  # auto-set by install.sh
   base_url: "http://localhost:11434/v1"
   max_tokens: 1024
 
@@ -346,293 +283,95 @@ qdrant:
   host: "localhost"
   port: 6333
 
-subsystems:                   # customise for your project
-  - servo
-  - imu
-  - gait
-
-memory_types:
-  - episodic
-  - semantic
-  - procedural
-  - causal
+subsystems: [servo, imu, gait, power, vision, voice, slam, ik, version_control]
+memory_types: [episodic, semantic, procedural, causal]
 ```
 
 ---
 
-## Writing Notes
+## Writing notes by hand
 
-Every note should include YAML frontmatter so Engram can tag and filter it correctly:
+You don't *need* to write notes manually — Claude does that via MCP. But if
+you want to:
 
 ```markdown
 ---
 memory_type: episodic
 subsystem: servo
-tags: [overheating, backward-gait, rr-wrist]
-date: 2026-05-25
+tags: [overheating, rr_wrist]
+date: 2026-05-26
 ---
 
 # RR Wrist Servo Overheating
 
 ## Symptom
-Servo overheats during backward gait, causing torque loss and snap to default angle.
+Overheats during backward gait, snaps to default angle.
 
 ## Cause
-Unequal static load distribution — RR leg bearing more weight during backward motion.
+Unequal static load distribution.
 
 ## Fix
-Paper-slip foot contact test. IMU roll/pitch logging to detect lean.
+Paper-slip foot contact test + IMU roll/pitch logging.
 ```
 
-### memory_type values
-
-| Value | Use for |
-|---|---|
-| `episodic` | Debugging sessions, incidents, experiments |
-| `semantic` | Facts, specs, reference material |
-| `procedural` | Step-by-step procedures, calibration, SOPs |
-| `causal` | Root cause analyses, failure chains |
-
-Notes without frontmatter still work — they're tagged as `semantic / unknown` and fully searchable.
+Drop it anywhere in `vault/`. The watcher picks it up, embeds it, stores it.
 
 ---
 
-## API Reference
+## REST API (if you want to drive Memcon programmatically)
 
-Base URL: `http://localhost:8000`
+Base: `http://localhost:8000`
 
-### GET /health
-```bash
-curl http://localhost:8000/health
-# {"status": "ok"}
-```
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | status check |
+| GET | `/stats` | chunk count, collection, project |
+| GET | `/config` | active config |
+| GET | `/memory/recent?limit=10` | latest notes |
+| GET | `/memory/note?path=...` | raw markdown of a note |
+| POST | `/query` | semantic search (raw chunks) |
+| POST | `/ask` | RAG answer (LLM grounded in memory) |
+| POST | `/ingest` | manually ingest a file |
+| POST | `/memory/debug` | write a debug note |
+| POST | `/memory/decision` | write a decision |
+| POST | `/memory/experiment` | write an experiment |
+| POST | `/memory/session` | write a session summary |
+| POST | `/memory/update` | append to an existing note |
+| GET | `/ui` | the web dashboard |
 
-### GET /stats
-```bash
-curl http://localhost:8000/stats
-# {"total_chunks": 103, "collection": "engram_memory", ...}
-```
-
-### GET /config
-```bash
-curl http://localhost:8000/config
-# Returns current project config
-```
-
-### POST /query — Semantic search (raw chunks)
-```bash
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "servo overheating", "top_k": 5}'
-```
-
-Filter by subsystem:
-```bash
-  -d '{"query": "servo overheating", "top_k": 5, "subsystem": "servo"}'
-```
-
-### POST /ask — RAG answer (LLM grounded in your memory)
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "What caused the RR wrist servo to overheat?"}'
-```
-
-Response:
-```json
-{
-  "answer": "The RR wrist servo overheated due to...",
-  "sources": ["rr_wrist_overheating", "i2c_oserror"],
-  "chunks_used": 5,
-  "raw_chunks": [...]
-}
-```
-
-### POST /ingest — Manually ingest a file
-```bash
-curl -X POST http://localhost:8000/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"filepath": "vault/debugging/my_note.md"}'
+  -d '{"question": "What caused the servo to overheat?", "top_k": 5}'
 ```
 
 ---
 
-## Bulk Operations
+## Reset / rebuild
 
-### Re-ingest entire vault
 ```bash
-source .venv/bin/activate
+# Wipe Qdrant and re-ingest from scratch
+curl -X DELETE http://localhost:6333/collections/memcon_memory
 python3 scripts/ingest_all.py
 ```
 
-### Ingest git history from your project repo
-```bash
-# Set BARQ_REPO in .env first
-python3 scripts/ingest_git.py
-```
-
-### CLI query (no API needed)
-```bash
-source .venv/bin/activate
-python3 memory/retrieve.py servo overheating backward gait
-```
-
-### Wipe and rebuild from scratch
-```bash
-curl -X DELETE http://localhost:6333/collections/engram_memory
-python3 scripts/ingest_all.py
-```
-
----
-
-## Choosing a Local LLM
-
-Engram uses Ollama for local inference. Change the model in `engram.config.yaml`:
-
-```yaml
-llm:
-  model: "qwen2.5-coder:7b"   # change this line
-```
-
-Then pull the model:
-```bash
-ollama pull <model-name>
-```
-
-### Recommended models by hardware
-
-| RAM | Recommended Model | Quality |
-|---|---|---|
-| 8GB | `llama3.2` (3B) | Good |
-| 16GB | `qwen2.5-coder:7b` | Great — **default** |
-| 16GB | `qwen2.5:14b` | Best quality |
-| 32GB+ | `llama3.1:70b` | Exceptional |
-
-> `qwen2.5-coder:7b` is the default because it's specifically trained on code and technical content — ideal for engineering projects.
-
----
-
-## Domain Templates
-
-Engram ships with three domain templates. To use one, copy it over your config:
+If the venv breaks (e.g. after moving the folder):
 
 ```bash
-cp templates/gamedev.yaml engram.config.yaml    # game development
-cp templates/research.yaml engram.config.yaml   # academic research
-cp templates/robotics.yaml engram.config.yaml   # robotics (default)
+rm -rf .venv && ./install.sh
 ```
-
-Or build your own by editing `engram.config.yaml` directly.
-
----
-
-## Project Structure
-
-```
-engram/
-├── engram.config.yaml      ← Master configuration
-├── config.py               ← Config loader (reads yaml)
-├── install.sh              ← One-command setup
-├── start.sh                ← Start all services
-├── stop.sh                 ← Stop all services
-├── docker-compose.yml      ← Qdrant container
-│
-├── vault/                  ← Your notes (Obsidian vault)
-│   ├── _templates/         ← Note templates
-│   ├── debugging/
-│   ├── experiments/
-│   ├── decisions/
-│   ├── hardware/
-│   ├── firmware/
-│   ├── telemetry/
-│   └── gait/
-│
-├── ingestion/
-│   ├── chunker.py          ← Splits markdown into chunks
-│   ├── embedder.py         ← Embeds via sentence-transformers
-│   ├── ingest.py           ← Orchestrates chunk → embed → store
-│   └── watcher.py          ← File system watcher (auto-ingest)
-│
-├── memory/
-│   ├── qdrant_store.py     ← Qdrant client + search interface
-│   └── retrieve.py         ← CLI semantic search
-│
-├── api/
-│   ├── main.py             ← FastAPI: /query /ask /ingest /ui
-│   └── ui.html             ← Web dashboard (single file)
-│
-├── scripts/
-│   ├── ingest_all.py       ← Bulk ingest entire vault
-│   └── ingest_git.py       ← Ingest git commit history
-│
-└── templates/
-    ├── robotics.yaml
-    ├── gamedev.yaml
-    └── research.yaml
-```
-
----
-
-## Stack
-
-| Layer | Technology | Why |
-|---|---|---|
-| Vector database | [Qdrant](https://qdrant.tech) | Best local vector DB, Docker-native, free |
-| Embeddings | [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | Fast, 384-dim, excellent quality, ~90MB |
-| Local LLM | [Ollama](https://ollama.com) | Best local model runner, Metal/CUDA support |
-| API | [FastAPI](https://fastapi.tiangolo.com) | Fast, clean, automatic OpenAPI docs |
-| Notes | [Obsidian](https://obsidian.md) | Best local markdown knowledge base |
-| Watcher | [watchdog](https://github.com/gorakhargosh/watchdog) | Cross-platform file system events |
-
----
-
-## Reinstalling / Resetting
-
-### If venv breaks (e.g. after moving folder)
-```bash
-rm -rf .venv
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install fastapi uvicorn qdrant-client sentence-transformers \
-  watchdog anthropic python-frontmatter python-dotenv gitpython rich openai pyyaml
-```
-
-### Full reset (wipes all memory)
-```bash
-curl -X DELETE http://localhost:6333/collections/engram_memory
-python3 scripts/ingest_all.py
-```
-
----
-
-## Roadmap
-
-- [ ] VS Code / Cursor extension (inline memory queries while coding)
-- [ ] Multi-project support (multiple collections, project switcher in UI)
-- [ ] ROS bag / telemetry log ingestion
-- [ ] PDF ingestion (papers, datasheets)
-- [ ] Team shared memory (multi-user Qdrant)
-- [ ] Cloud hosted version
 
 ---
 
 ## Origin
 
-Engram was built as the memory system for **BARQ** — an autonomous 12-DOF quadruped robot. After spending hours rediscovering old debugging sessions and forgetting why certain architectural decisions were made, a persistent engineering memory became a necessity.
+Memcon was built as the memory system for **BARQ** — an autonomous 12-DOF
+quadruped robot. After spending hours rediscovering old debugging sessions
+and forgetting why architectural decisions were made, a persistent
+project memory became a necessity.
 
-The system generalised naturally: every long-running engineering project has the same problem. Engram is the solution.
-
----
-
-## Contributing
-
-Contributions welcome. Open an issue first for major changes.
-
-```bash
-git clone https://github.com/aryasgit/engram.git
-cd engram
-./install.sh
-```
+The system generalised naturally: every long-running engineering project has
+the same problem. Memcon is the solution.
 
 ---
 
@@ -646,6 +385,6 @@ MIT — do whatever you want with it.
 
 Built for engineers who build hard things.
 
-**[⭐ Star on GitHub](https://github.com/aryasgit/engram)**
+**[⭐ Star on GitHub](https://github.com/aryasgit/memcon)**
 
 </div>

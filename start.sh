@@ -19,7 +19,7 @@ echo "Press Ctrl+C to stop"
 
 cleanup() {
   echo ""
-  echo "Stopping engram..."
+  echo "Stopping memcon..."
   kill $WATCHER_PID 2>/dev/null
   rm -f .watcher.pid
   exit 0

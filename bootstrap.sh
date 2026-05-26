@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
 #
-# Engram bootstrap — clone the repo and run the installer in one shot.
+# Memcon bootstrap — clone the repo and run the installer in one shot.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/aryasgit/engram/main/bootstrap.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash
 #
 # Environment overrides:
-#   ENGRAM_DIR    Target directory (default: ~/engram)
-#   ENGRAM_REPO   Repo URL        (default: https://github.com/aryasgit/engram.git)
-#   ENGRAM_REF    Branch / tag    (default: main)
+#   MEMCON_DIR    Target directory (default: ~/memcon)
+#   MEMCON_REPO   Repo URL        (default: https://github.com/aryasgit/memcon.git)
+#   MEMCON_REF    Branch / tag    (default: main)
+#   MEMCON_MODEL  Override the RAM-auto model pick (e.g. "qwen2.5-coder:14b")
 #
 set -euo pipefail
 
-REPO="${ENGRAM_REPO:-https://github.com/aryasgit/engram.git}"
-REF="${ENGRAM_REF:-main}"
-TARGET="${ENGRAM_DIR:-$HOME/engram}"
+REPO="${MEMCON_REPO:-https://github.com/aryasgit/memcon.git}"
+REF="${MEMCON_REF:-main}"
+TARGET="${MEMCON_DIR:-$HOME/memcon}"
 
 echo "╔══════════════════════════════════════╗"
-echo "║          ENGRAM — bootstrap          ║"
+echo "║          MEMCON — bootstrap          ║"
 echo "╚══════════════════════════════════════╝"
 echo "  repo: $REPO"
 echo "  ref:  $REF"

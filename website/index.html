@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memcon — Memory Context for Claude</title>
+<meta name="description" content="Local, persistent project memory that plugs straight into Claude. Auto-query before answering, auto-write after solving. Zero cloud.">
+<meta property="og:title" content="Memcon — Memory Context for Claude">
+<meta property="og:description" content="Local, persistent project memory that plugs straight into Claude. Auto-query before answering, auto-write after solving. Zero cloud.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0a;
+    --bg-elev:#141414;
+    --bg-soft:#1a1a1a;
+    --text:#f4f4f4;
+    --text-2:#cfcfcf;
+    --text-dim:#9a9a9a;
+    --text-faint:#666;
+    --text-ghost:#3a3a3a;
+    --border:#232323;
+    --border-2:#2e2e2e;
+    --border-strong:#444;
+    --accent:#fff;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .display{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.025em;font-weight:700}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+  /* Faint dot grid */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background-image:radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:0 0;
+    pointer-events:none;
+    z-index:0;
+    opacity:.5;
+  }
+  main{position:relative;z-index:1}
+
+  .container{max-width:1200px;margin:0 auto;padding:0 2rem}
+  @media(max-width:720px){.container{padding:0 1.25rem}}
+
+  /* ── NAV ─────────────────────────────────────────────── */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(10,10,10,.85);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav-row{display:flex;justify-content:space-between;align-items:center;padding:1rem 0;font-size:.92rem}
+  .logo{display:flex;align-items:center;gap:.6rem;font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-.01em;font-size:1.05rem}
+  .logo .dot{width:9px;height:9px;background:var(--text)}
+  .nav-links{display:flex;gap:1.75rem;align-items:center}
+  .nav-links a{color:var(--text-dim);text-decoration:none;transition:color .15s}
+  .nav-links a:hover{color:var(--text)}
+  .nav-cta{background:var(--text);color:var(--bg);padding:.5rem 1rem;border-radius:6px;font-weight:600;font-size:.85rem;text-decoration:none;transition:opacity .15s}
+  .nav-cta:hover{opacity:.85}
+  @media(max-width:600px){.nav-links a:not(.nav-cta){display:none}}
+
+  /* ── HERO ────────────────────────────────────────────── */
+  .hero{padding:6rem 0 4rem;position:relative}
+  .badge{
+    display:inline-flex;align-items:center;gap:.5rem;
+    border:1px solid var(--border-strong);padding:.35rem .85rem;border-radius:999px;
+    font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text-dim);
+    margin-bottom:1.75rem;
+  }
+  .badge .live-dot{width:6px;height:6px;background:var(--text);border-radius:50%;animation:blink 2s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .hero h1{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;
+    font-size:clamp(3rem,8vw,7rem);
+    letter-spacing:-.04em;line-height:.92;
+    margin-bottom:1.5rem;
+  }
+  .hero h1 .pill{
+    font-family:'JetBrains Mono',monospace;font-weight:500;
+    font-size:.42em;letter-spacing:-.01em;
+    background:var(--text);color:var(--bg);
+    padding:.1em .3em;display:inline-block;
+    vertical-align:.45em;line-height:1.1;
+    margin-left:.15em;
+  }
+  .hero p.lead{
+    font-size:clamp(1.05rem,1.5vw,1.3rem);
+    color:var(--text-2);max-width:640px;
+    line-height:1.55;margin-bottom:2.5rem;
+  }
+
+  .hero-ctas{display:flex;gap:1rem;flex-wrap:wrap;align-items:center}
+  .btn{
+    display:inline-flex;align-items:center;gap:.5rem;
+    padding:.85rem 1.4rem;border-radius:8px;
+    font-family:inherit;font-weight:600;font-size:.92rem;
+    text-decoration:none;cursor:pointer;transition:all .15s;
+    border:1px solid var(--border-strong);
+  }
+  .btn.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .btn.primary:hover{opacity:.85}
+  .btn.ghost{background:transparent;color:var(--text);border-color:var(--border-strong)}
+  .btn.ghost:hover{border-color:var(--text)}
+
+  .install-strip{
+    display:flex;align-items:center;gap:.75rem;
+    background:var(--bg-elev);border:1px solid var(--border);
+    padding:.7rem 1rem;border-radius:8px;
+    font-family:'JetBrains Mono',monospace;font-size:.82rem;
+    margin-top:2rem;max-width:680px;
+    color:var(--text-2);overflow-x:auto;white-space:nowrap;
+  }
+  .install-strip .prompt{color:var(--text-faint);user-select:none}
+  .install-strip .cmd{flex:1}
+  .install-strip .copy{
+    background:transparent;border:1px solid var(--border-2);color:var(--text-dim);
+    font-family:inherit;font-size:.72rem;padding:.25rem .6rem;border-radius:4px;
+    cursor:pointer;transition:all .15s;
+  }
+  .install-strip .copy:hover{border-color:var(--text);color:var(--text)}
+
+  /* ── MARQUEE ─────────────────────────────────────────── */
+  .marquee-band{
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+    padding:1.25rem 0;
+    margin:5rem 0 0;
+    overflow:hidden;
+    background:var(--bg-elev);
+  }
+  .marquee{display:flex;gap:3rem;animation:scroll 40s linear infinite;width:fit-content;white-space:nowrap;font-family:'Space Grotesk',sans-serif;font-size:1.05rem;color:var(--text-dim);font-weight:500;letter-spacing:.01em}
+  .marquee span::before{content:"◆ ";color:var(--text-faint);margin-right:.5rem}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* ── SECTION HEADERS ─────────────────────────────────── */
+  section{padding:6rem 0;position:relative}
+  .section-label{
+    font-family:'JetBrains Mono',monospace;font-size:.75rem;
+    color:var(--text-faint);text-transform:uppercase;letter-spacing:.15em;
+    margin-bottom:1rem;display:inline-flex;align-items:center;gap:.5rem;
+  }
+  .section-label::before{content:"";width:24px;height:1px;background:var(--text-faint)}
+  h2{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;
+    font-size:clamp(2rem,4.5vw,3.5rem);
+    letter-spacing:-.025em;line-height:1.05;
+    margin-bottom:1.5rem;max-width:780px;
+  }
+  h2 .subtle{color:var(--text-faint)}
+  .section-lead{font-size:1.1rem;color:var(--text-2);max-width:640px;line-height:1.6;margin-bottom:3rem}
+
+  /* ── LOOP DIAGRAM ────────────────────────────────────── */
+  .loop{
+    border:1px solid var(--border);background:var(--bg-elev);
+    padding:2.5rem;border-radius:14px;
+    position:relative;
+  }
+  .loop::before,.loop::after{
+    content:"";position:absolute;width:14px;height:14px;
+    border:1px solid var(--text);
+  }
+  .loop::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+  .loop::after{top:-1px;right:-1px;border-width:1px 1px 0 0}
+  .loop-step{
+    display:grid;grid-template-columns:60px 1fr;gap:1.5rem;
+    padding:1.5rem 0;border-bottom:1px solid var(--border);
+  }
+  .loop-step:last-child{border-bottom:none}
+  .loop-num{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.5rem;
+    color:var(--text);width:48px;height:48px;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--border-strong);border-radius:50%;
+  }
+  .loop-step.user .loop-num{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .loop-body .who{font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);margin-bottom:.4rem}
+  .loop-body .what{font-size:1.05rem;color:var(--text);line-height:1.55}
+  .loop-body .code{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--text-dim);background:var(--bg-soft);padding:.5rem .75rem;border-radius:4px;margin-top:.6rem;display:inline-block;border:1px solid var(--border-2)}
+
+  /* ── FEATURE GRID ────────────────────────────────────── */
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2rem}
+  @media(max-width:900px){.features{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){.features{grid-template-columns:1fr}}
+  .feature{
+    position:relative;
+    border:1px solid var(--border);background:var(--bg-elev);
+    padding:1.75rem;border-radius:10px;
+    transition:all .2s;
+  }
+  .feature:hover{border-color:var(--text-dim);background:var(--bg-soft);transform:translateY(-2px)}
+  .feature::before,.feature::after{content:"";position:absolute;width:10px;height:10px;border-color:var(--text-dim);border-style:solid}
+  .feature::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+  .feature::after{top:-1px;right:-1px;border-width:1px 1px 0 0}
+  .feature .fig{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-faint);margin-bottom:.85rem;letter-spacing:.08em;text-transform:uppercase}
+  .feature h3{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.25rem;letter-spacing:-.015em;margin-bottom:.7rem;line-height:1.25}
+  .feature p{color:var(--text-dim);font-size:.92rem;line-height:1.55}
+
+  /* ── STACK DIAGRAM ───────────────────────────────────── */
+  .arch{
+    background:var(--bg-elev);border:1px solid var(--border);
+    border-radius:14px;padding:2.5rem;
+    font-family:'JetBrains Mono',monospace;font-size:.85rem;
+    color:var(--text-dim);line-height:1.7;
+    white-space:pre;overflow-x:auto;
+  }
+  .arch .hl{color:var(--text);font-weight:600}
+  .arch .accent{background:var(--text);color:var(--bg);padding:0 .25em}
+
+  /* ── CODE BLOCK ──────────────────────────────────────── */
+  .code-card{
+    background:var(--bg-elev);border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;
+  }
+  .code-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:.85rem 1.25rem;background:var(--bg-soft);
+    border-bottom:1px solid var(--border);
+    font-family:'JetBrains Mono',monospace;font-size:.75rem;
+    color:var(--text-faint);
+  }
+  .code-head .dots{display:flex;gap:.35rem}
+  .code-head .dots span{width:10px;height:10px;border-radius:50%;background:var(--border-strong)}
+  .code-body{padding:1.5rem;font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.65;color:var(--text-2);overflow-x:auto}
+  .code-body .k{color:var(--text)}
+  .code-body .s{color:var(--text-dim)}
+  .code-body .c{color:var(--text-faint);font-style:italic}
+
+  /* ── BIG QUOTE ───────────────────────────────────────── */
+  .quote{
+    padding:8rem 0;text-align:center;
+  }
+  .quote h2{
+    font-size:clamp(2.5rem,6vw,5rem);letter-spacing:-.035em;line-height:1;
+    margin:0 auto;max-width:none;
+  }
+  .quote h2 .pill{
+    font-family:'JetBrains Mono',monospace;font-weight:500;font-size:.5em;
+    background:var(--text);color:var(--bg);padding:.05em .25em;
+    vertical-align:.35em;line-height:1.1;display:inline-block;margin-left:.1em;
+  }
+
+  /* ── FINAL CTA ───────────────────────────────────────── */
+  .cta{padding:6rem 0;text-align:center}
+  .cta h2{margin:0 auto 1.5rem;max-width:780px}
+  .cta-row{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:2rem}
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  footer{
+    border-top:1px solid var(--border);padding:3rem 0;
+    color:var(--text-faint);font-size:.85rem;
+  }
+  .foot-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem}
+  .foot-links{display:flex;gap:1.5rem}
+  .foot-links a{color:var(--text-dim);text-decoration:none}
+  .foot-links a:hover{color:var(--text)}
+
+  /* ── REVEAL ANIM ─────────────────────────────────────── */
+  .reveal{opacity:0;transform:translateY(20px);transition:all .8s cubic-bezier(.2,.8,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--border-strong)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container nav-row">
+    <a href="#" class="logo"><span class="dot"></span>Memcon</a>
+    <div class="nav-links">
+      <a href="#loop">The Loop</a>
+      <a href="#why">Why</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/aryasgit/memcon" target="_blank">GitHub ↗</a>
+      <a href="https://github.com/aryasgit/memcon#wire-memcon-into-claude" target="_blank" class="nav-cta">Get Started →</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="badge"><span class="live-dot"></span>MCP READY · LOCAL · ZERO CLOUD</div>
+    <h1 class="display">
+      Your project<br>
+      never forgets<span class="pill">.mem</span>
+    </h1>
+    <p class="lead">
+      Memcon is a local memory layer that plugs straight into Claude. It
+      auto-queries your project history before answering and auto-writes
+      debug sessions after solving them. Nothing leaves your machine.
+    </p>
+    <div class="hero-ctas">
+      <a href="#install" class="btn primary">Install in 60 seconds →</a>
+      <a href="#loop" class="btn ghost">Watch the loop</a>
+    </div>
+    <div class="install-strip">
+      <span class="prompt">$</span>
+      <span class="cmd" id="install-cmd">curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash</span>
+      <button class="copy" onclick="copyInstall()">copy</button>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-band">
+  <div class="marquee">
+    <span>memcon_query</span>
+    <span>memcon_ask</span>
+    <span>memcon_write_debug</span>
+    <span>memcon_write_decision</span>
+    <span>memcon_write_experiment</span>
+    <span>memcon_session_summary</span>
+    <span>memcon_update_note</span>
+    <span>memcon_stats</span>
+    <span>memcon_subsystems</span>
+    <span>memcon_query</span>
+    <span>memcon_ask</span>
+    <span>memcon_write_debug</span>
+    <span>memcon_write_decision</span>
+    <span>memcon_write_experiment</span>
+    <span>memcon_session_summary</span>
+    <span>memcon_update_note</span>
+    <span>memcon_stats</span>
+    <span>memcon_subsystems</span>
+  </div>
+</div>
+
+<!-- THE LOOP -->
+<section id="loop">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">The Loop</div>
+      <h2 class="display">Claude asks. Memcon answers. <span class="subtle">It writes the result back. Forever.</span></h2>
+      <p class="section-lead">No copy-paste. No manual note-taking. The vault grows itself while you work.</p>
+    </div>
+
+    <div class="loop reveal">
+      <div class="loop-step user">
+        <div class="loop-num">1</div>
+        <div class="loop-body">
+          <div class="who">You</div>
+          <div class="what">"Why is the RR wrist servo overheating again?"</div>
+        </div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">2</div>
+        <div class="loop-body">
+          <div class="who">Claude · MCP call</div>
+          <div class="what">Claude reaches for Memcon to look up your past work on this symptom.</div>
+          <span class="code">memcon_query("RR wrist servo overheating")</span>
+        </div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">3</div>
+        <div class="loop-body">
+          <div class="who">Memcon · semantic search</div>
+          <div class="what">Top-5 chunks from your vault. Not the whole memory — only what semantically matches the symptoms.</div>
+          <span class="code">→ 5 chunks: rr_wrist_overheating, i2c_oserror, gait_log_03 …</span>
+        </div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">4</div>
+        <div class="loop-body">
+          <div class="who">Claude · grounded answer</div>
+          <div class="what">"Last time, the cause was vibration-loosened wiring causing a power brownout during backward gait. The fix was tightening connectors and redistributing static load on the RR leg."</div>
+        </div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">5</div>
+        <div class="loop-body">
+          <div class="who">Claude · MCP write</div>
+          <div class="what">You confirm the new fix. Claude writes it back without you typing anything.</div>
+          <span class="code">memcon_write_debug(title, symptom, cause, fix, subsystem="servo")</span>
+        </div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">6</div>
+        <div class="loop-body">
+          <div class="who">Memcon · persisted</div>
+          <div class="what">New markdown note lands in <span class="mono" style="color:var(--text)">vault/debugging/</span>. Obsidian sees it instantly. Watcher re-ingests it. Searchable next session.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section id="why" style="border-top:1px solid var(--border)">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Why this matters</div>
+      <h2 class="display">Not RAG. Not a chatbot. <span class="subtle">A backend brain.</span></h2>
+      <p class="section-lead">Most "AI memory" solutions are cloud services that read your code. Memcon is a process that lives next to Claude on your machine.</p>
+    </div>
+
+    <div class="features">
+      <div class="feature reveal">
+        <div class="fig">fig.01 / local</div>
+        <h3>Your machine. Your memory.</h3>
+        <p>Qdrant in Docker, sentence-transformers locally, Ollama for the LLM. Nothing in this stack touches the cloud. Your engineering history is yours.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="fig">fig.02 / hashmap</div>
+        <h3>Keyed by meaning, not strings.</h3>
+        <p>Ask about a "weird motor error" — get back the note that talks about "servo torque loss." Embeddings catch what keyword search misses.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="fig">fig.03 / mcp</div>
+        <h3>Claude does the work.</h3>
+        <p>Nine MCP tools. Claude decides when to query and when to write. You just work. The reflex is "ask Claude" — Memcon disappears into the background.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="fig">fig.04 / obsidian</div>
+        <h3>Markdown on disk.</h3>
+        <p>Every "memory" is a real .md file in <span class="mono">vault/</span>. Open the folder in Obsidian. Edit, link, browse. No proprietary database to migrate out of.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="fig">fig.05 / free</div>
+        <h3>$0 forever.</h3>
+        <p>No API keys. No subscriptions. No vendor lock-in. The recurring cost is exactly zero — electricity not included.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="fig">fig.06 / open</div>
+        <h3>MIT licensed.</h3>
+        <p>Fork it, modify it, ship it inside your own product. Built for engineers who build hard things.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section style="border-top:1px solid var(--border)">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Architecture</div>
+      <h2 class="display">Five processes. <span class="subtle">All on your laptop.</span></h2>
+    </div>
+    <div class="arch reveal">
+<span class="c">                ┌─────────────────────────────────────┐</span>
+<span class="c">                │</span>     <span class="hl">Claude Desktop / Cursor / Code</span>    <span class="c">│</span>
+<span class="c">                └────────────────┬────────────────────┘</span>
+                                 │ <span class="hl">stdio (JSON-RPC)</span>
+<span class="c">                ┌────────────────▼────────────────────┐</span>
+<span class="c">                │</span>      <span class="accent">memcon_mcp/server.py</span>            <span class="c">│</span>
+<span class="c">                │</span>  9 tools · query · ask · write_*     <span class="c">│</span>
+<span class="c">                └─┬──────────────┬────────────────┬───┘</span>
+                  │              │                │
+<span class="c">     ┌────────────▼──┐  ┌────────▼──────┐  ┌──────▼─────┐</span>
+<span class="c">     │</span> <span class="hl">Qdrant</span>         <span class="c">│  │</span> <span class="hl">Ollama</span>          <span class="c">│  │</span> <span class="hl">Obsidian</span>   <span class="c">│</span>
+<span class="c">     │</span> :6333          <span class="c">│  │</span> :11434         <span class="c">│  │</span> vault/     <span class="c">│</span>
+<span class="c">     │</span> vectors        <span class="c">│  │</span> qwen2.5-coder  <span class="c">│  │</span> markdown   <span class="c">│</span>
+<span class="c">     └───────────────┘  └────────────────┘  └────┬───────┘</span>
+                                                  │ watcher.py
+                                                  ▼
+                                          re-ingest on save
+    </div>
+  </div>
+</section>
+
+<!-- CODE EXAMPLE -->
+<section style="border-top:1px solid var(--border)">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">In practice</div>
+      <h2 class="display">Six lines of config. <span class="subtle">That's the integration.</span></h2>
+      <p class="section-lead">After install, paste this into Claude Desktop's MCP config and restart.</p>
+    </div>
+
+    <div class="code-card reveal">
+      <div class="code-head">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div>~/Library/Application Support/Claude/claude_desktop_config.json</div>
+      </div>
+      <div class="code-body">
+<span class="k">{</span>
+  <span class="s">"mcpServers"</span>: <span class="k">{</span>
+    <span class="s">"memcon"</span>: <span class="k">{</span>
+      <span class="s">"command"</span>: <span class="s">"/Users/you/memcon/.venv/bin/python3"</span>,
+      <span class="s">"args"</span>: [<span class="s">"-m"</span>, <span class="s">"memcon_mcp.server"</span>],
+      <span class="s">"cwd"</span>: <span class="s">"/Users/you/memcon"</span>
+    <span class="k">}</span>
+  <span class="k">}</span>
+<span class="k">}</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUOTE -->
+<section class="quote">
+  <div class="container">
+    <h2 class="display">
+      Built for engineers<br>
+      who build<span class="pill">hard things</span>
+    </h2>
+  </div>
+</section>
+
+<!-- INSTALL CTA -->
+<section id="install" class="cta" style="border-top:1px solid var(--border)">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" style="justify-content:center">Install</div>
+      <h2 class="display">One command. <span class="subtle">Five minutes.</span></h2>
+      <p class="section-lead" style="margin:0 auto 2rem">macOS, Linux, or WSL. Needs Docker + Python 3.10+. The installer detects your RAM and pulls the right LLM automatically.</p>
+    </div>
+    <div class="install-strip reveal" style="margin:2rem auto">
+      <span class="prompt">$</span>
+      <span class="cmd">curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash</span>
+      <button class="copy" onclick="copyInstall()">copy</button>
+    </div>
+    <div class="cta-row reveal">
+      <a href="https://github.com/aryasgit/memcon" target="_blank" class="btn primary">View on GitHub ↗</a>
+      <a href="https://github.com/aryasgit/memcon/tree/main/memcon_mcp" target="_blank" class="btn ghost">MCP Docs</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container foot-row">
+    <div style="display:flex;align-items:center;gap:.6rem">
+      <span class="logo"><span class="dot"></span>Memcon</span>
+      <span style="color:var(--text-ghost)">·</span>
+      <span>MIT · 2026</span>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/aryasgit/memcon" target="_blank">GitHub</a>
+      <a href="https://github.com/aryasgit/memcon/tree/main/memcon_mcp" target="_blank">MCP Docs</a>
+      <a href="https://github.com/aryasgit/memcon/blob/main/README.md" target="_blank">README</a>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<script>
+  // Copy install command
+  function copyInstall(){
+    var cmd = 'curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash';
+    navigator.clipboard.writeText(cmd).then(function(){
+      var btns = document.querySelectorAll('.copy');
+      btns.forEach(function(b){
+        var prev = b.textContent;
+        b.textContent = 'copied!';
+        setTimeout(function(){ b.textContent = prev; }, 1200);
+      });
+    });
+  }
+
+  // Reveal-on-scroll
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) e.target.classList.add('in');
+    });
+  }, {threshold: .12, rootMargin: '0px 0px -50px 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){ observer.observe(el); });
+</script>
+</body>
+</html>

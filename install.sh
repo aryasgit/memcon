@@ -2,7 +2,7 @@
 set -e
 
 echo "╔══════════════════════════════════════╗"
-echo "║     ENGRAM — Installation Setup      ║"
+echo "║     MEMCON — Installation Setup      ║"
 echo "╚══════════════════════════════════════╝"
 echo ""
 
@@ -45,26 +45,38 @@ fi
 
 echo "   Detected RAM: ${TOTAL_RAM_GB}GB"
 
-if [ "$TOTAL_RAM_GB" -ge 16 ]; then
+if [ "$TOTAL_RAM_GB" -ge 64 ]; then
+  SELECTED_MODEL="qwen2.5-coder:32b"
+  MODEL_REASON="64GB+ RAM → flagship 32B coder, best memory tracking"
+elif [ "$TOTAL_RAM_GB" -ge 32 ]; then
+  SELECTED_MODEL="qwen2.5-coder:14b"
+  MODEL_REASON="32-64GB RAM → 14B coder, strong technical reasoning"
+elif [ "$TOTAL_RAM_GB" -ge 16 ]; then
   SELECTED_MODEL="qwen2.5-coder:7b"
-  MODEL_REASON="16GB+ RAM → high quality coding model"
+  MODEL_REASON="16-32GB RAM → 7B coder, solid default"
 elif [ "$TOTAL_RAM_GB" -ge 8 ]; then
   SELECTED_MODEL="qwen2.5-coder:3b"
-  MODEL_REASON="8-16GB RAM → balanced coding model"
+  MODEL_REASON="8-16GB RAM → balanced 3B coder"
 else
   SELECTED_MODEL="llama3.2:1b"
-  MODEL_REASON="<8GB RAM → lightweight model"
+  MODEL_REASON="<8GB RAM → lightweight 1B model"
+fi
+
+# Allow override via MEMCON_MODEL env var (skips the auto tier entirely)
+if [ -n "$MEMCON_MODEL" ]; then
+  SELECTED_MODEL="$MEMCON_MODEL"
+  MODEL_REASON="overridden via MEMCON_MODEL env var"
 fi
 
 echo "   Selected model: $SELECTED_MODEL ($MODEL_REASON)"
 echo ""
 
 # ── UPDATE CONFIG WITH SELECTED MODEL ────
-if [ -f "engram.config.yaml" ]; then
+if [ -f "memcon.config.yaml" ]; then
   if [ "$OS" = "Darwin" ]; then
-    sed -i '' "s|model: \".*\"|model: \"$SELECTED_MODEL\"|" engram.config.yaml
+    sed -i '' "s|model: \".*\"|model: \"$SELECTED_MODEL\"|" memcon.config.yaml
   else
-    sed -i "s|model: \".*\"|model: \"$SELECTED_MODEL\"|" engram.config.yaml
+    sed -i "s|model: \".*\"|model: \"$SELECTED_MODEL\"|" memcon.config.yaml
   fi
   echo "✅ Config updated with model: $SELECTED_MODEL"
 fi

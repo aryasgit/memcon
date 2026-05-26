@@ -1,6 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")"
-echo "Stopping engram..."
+echo "Stopping memcon..."
 
 # Kill watcher
 if [ -f .watcher.pid ]; then

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Engram</title>
+<title>Memcon</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -222,10 +222,10 @@
   <header>
     <div class="brand-row">
       <button class="hamburger" onclick="toggleSidebar()">≡</button>
-      <div class="logo"><span class="dot"></span>Engram</div>
+      <div class="logo"><span class="dot"></span>Memcon</div>
     </div>
     <div class="header-meta">
-      <span class="proj" id="project-name">engram</span>
+      <span class="proj" id="project-name">memcon</span>
       <span class="domain" id="domain-label"></span>
       <span class="mono" id="s-status" style="color:var(--text-faint);font-size:.75rem">·</span>
       <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">◐</button>
@@ -269,11 +269,11 @@
       <div class="col">
         <div id="hero" class="hero">
           <h1 class="display">Your project<br>never forgets<span class="accent">.mem</span></h1>
-          <p>Ask Engram a question about your engineering history. Local vectors, grounded answers, zero cloud.</p>
+          <p>Ask Memcon a question about your engineering history. Local vectors, grounded answers, zero cloud.</p>
 
           <div class="note" id="mcp-banner">
             <div class="body">
-              <span class="label">MCP</span>Plug Engram into Claude Desktop, Cursor, or Claude Code so it auto-queries and auto-writes project memory. See <a href="https://github.com/aryasgit/engram/tree/main/engram_mcp" target="_blank">engram_mcp/README.md</a>.
+              <span class="label">MCP</span>Plug Memcon into Claude Desktop, Cursor, or Claude Code so it auto-queries and auto-writes project memory. See <a href="https://github.com/aryasgit/memcon/tree/main/memcon_mcp" target="_blank">memcon_mcp/README.md</a>.
             </div>
             <button class="dismiss" onclick="dismissBanner()" title="hide">×</button>
           </div>
@@ -347,22 +347,22 @@ var STARTERS = [
 // ── THEME / BANNER ───────────────────────────────────────
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme', t);
-  try{ localStorage.setItem('engram-theme', t); }catch(e){}
+  try{ localStorage.setItem('memcon-theme', t); }catch(e){}
 }
 function toggleTheme(){
   var cur = document.documentElement.getAttribute('data-theme');
   applyTheme(cur === 'dark' ? 'light' : 'dark');
 }
 (function(){
-  try{ var s = localStorage.getItem('engram-theme'); if (s) applyTheme(s); }catch(e){}
+  try{ var s = localStorage.getItem('memcon-theme'); if (s) applyTheme(s); }catch(e){}
 })();
 function dismissBanner(){
   var el = document.getElementById('mcp-banner');
   if (el) el.style.display = 'none';
-  try{ localStorage.setItem('engram-banner','hidden'); }catch(e){}
+  try{ localStorage.setItem('memcon-banner','hidden'); }catch(e){}
 }
 (function(){
-  try{ if (localStorage.getItem('engram-banner')==='hidden'){
+  try{ if (localStorage.getItem('memcon-banner')==='hidden'){
     var el = document.getElementById('mcp-banner'); if (el) el.style.display='none';
   }}catch(e){}
 })();
@@ -391,7 +391,7 @@ async function init(){
     var conf = await fetch('/config').then(function(r){ return r.json(); });
     document.getElementById('s-model').textContent  = conf.llm_model || '—';
     document.getElementById('s-status').textContent = '● online';
-    document.getElementById('project-name').textContent = conf.project || 'engram';
+    document.getElementById('project-name').textContent = conf.project || 'memcon';
     document.getElementById('domain-label').textContent = conf.domain ? ('/ ' + conf.domain) : '';
     subsystems = conf.subsystems || [];
     var chipsEl = document.getElementById('filter-chips');
@@ -510,7 +510,7 @@ async function doSubmit(){
   document.getElementById('conv').style.display = 'flex';
 
   msgs.push({role:'user', text:q});
-  var pending = {role:'engram', text:'', loading:true};
+  var pending = {role:'memcon', text:'', loading:true};
   msgs.push(pending);
   renderConv();
   scrollBottom();
@@ -558,7 +558,7 @@ function renderConv(){
                '<div class="bubble">'+ esc(m.text) +'</div>'+
              '</div>';
     }
-    // engram
+    // memcon
     var body = '';
     if (m.loading){
       body = skeleton();
@@ -587,8 +587,8 @@ function renderConv(){
         body += '<div class="sources">sources · '+ esc(m.sources.join(', ')) +' · '+ (m.chunksUsed||0) +' chunks</div>';
       }
     }
-    return '<div class="msg engram">'+
-             '<div class="role">Engram</div>'+
+    return '<div class="msg memcon">'+
+             '<div class="role">Memcon</div>'+
              body +
            '</div>';
   }).join('');

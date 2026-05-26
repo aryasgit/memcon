@@ -1,7 +1,7 @@
 # Full docker-compose stack — no local Python needed.
 #
-# Runs Qdrant + Engram API + vault watcher in containers. The vault and
-# engram.config.yaml are bind-mounted from the host so notes live locally.
+# Runs Qdrant + Memcon API + vault watcher in containers. The vault and
+# memcon.config.yaml are bind-mounted from the host so notes live locally.
 #
 # Quick start:
 #   docker compose -f docker-compose.full.yml up -d
@@ -18,19 +18,19 @@ services:
     volumes:
       - ./qdrant_storage:/qdrant/storage
 
-  engram:
+  memcon:
     build: .
     depends_on:
       - qdrant
     ports:
       - "8000:8000"
     environment:
-      # Point Qdrant client at the qdrant service (overrides engram.config.yaml host).
-      # Note: engram.config.yaml is still authoritative for everything else.
-      - ENGRAM_QDRANT_HOST=qdrant
+      # Point Qdrant client at the qdrant service (overrides memcon.config.yaml host).
+      # Note: memcon.config.yaml is still authoritative for everything else.
+      - MEMCON_QDRANT_HOST=qdrant
     volumes:
       - ./vault:/app/vault
-      - ./engram.config.yaml:/app/engram.config.yaml
+      - ./memcon.config.yaml:/app/memcon.config.yaml
       - ./.env:/app/.env
     extra_hosts:
       # Lets the API reach Ollama running on the host machine
