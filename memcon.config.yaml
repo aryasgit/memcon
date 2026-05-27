@@ -5,7 +5,7 @@ project:
 
 vault:
   path: "./vault"
-  skip_dirs: ["_templates"]
+  skip_dirs: ["_templates", ".memcon"]   # .memcon/ holds the entity index DB
   chunk_size: 400
   min_chunk_length: 30
 
@@ -28,6 +28,10 @@ api:
   host: "0.0.0.0"
   port: 8000
 
+# subsystems — a soft constraint on the `subsystem` field in note frontmatter.
+# Used by memcon_capture as a hint to the LLM (it tries to pick from this
+# list). Leave empty `[]` to accept any free-form string. Add the buckets
+# that make sense for your domain — these are BARQ's.
 subsystems:
   - servo
   - imu
@@ -39,8 +43,32 @@ subsystems:
   - ik
   - version_control
 
+# memory_types — legacy taxonomy kept for back-compat. The new `type` field
+# in note frontmatter uses note_kinds below; memory_type is auto-derived.
 memory_types:
   - episodic
   - semantic
   - procedural
   - causal
+
+# note_kinds — informational, the canonical list lives in memory/templates.py
+# (ALL_KINDS). Listed here so you can see what memcon_capture can produce.
+note_kinds:
+  - debug          # something broke; investigation + fix
+  - decision       # a non-obvious choice + rationale
+  - experiment     # tried X; here's what happened
+  - concept        # definition / mental model
+  - reference      # captured API / spec / external resource
+  - meeting        # sync / discussion notes
+  - breakthrough   # the "aha" insight that unlocked future work
+  - session        # end-of-session roll-up
+
+# entity categories captured by extractor.extract_entities()
+# (informational — the canonical list is ENTITY_CATEGORIES in memory/extractor.py)
+entity_categories:
+  - files          # source paths / file names
+  - symbols        # functions, classes, methods
+  - errors         # exception types, error codes, error messages
+  - packages       # external libraries / packages
+  - urls           # http(s) links
+  - concepts       # named products, services, hardware, domain terms
