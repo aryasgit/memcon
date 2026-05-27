@@ -92,9 +92,20 @@ All still local.
       pulled from each related note's TL;DR. Non-blocking — write returns
       instantly.
 
+**Layer 5 — Backfill migration** *(✅ shipped)*
+- [x] `scripts/migrate_to_v3_1.py` — walks the vault, parses legacy
+      frontmatter + body, infers the kind from folder + memory_type, lifts
+      `## Symptom` / `## Cause` / `## Fix Applied` / etc. into the v3.1 field
+      names, runs entity extraction (LLM if Ollama is up, regex fallback
+      otherwise), preserves verbatim original under `## Context`, and
+      re-ingests into Qdrant
+- [x] Idempotent — second run detects `type:` in frontmatter and skips
+- [x] Safe — backs originals up to `{vault}/_backup_v3.1_<timestamp>/`
+      unless `--no-backup` is passed
+- [x] CLI: `python3 -m scripts.migrate_to_v3_1 [--dry-run] [--no-llm]
+      [--limit N] [--no-backup] [--reingest] [--verbose]`
+
 **Still to land before tagging v3.1.0:**
-- [ ] Migration script: backfill old 4-field notes into the new schema
-      (lift `## Symptom` → `tldr`, run entity extractor over the existing body)
 - [ ] `memcon_pattern(topic)` — first crack at v4 contradiction/pattern
       detection, built on the entity index + semantic graph
 - [ ] End-to-end test with Ollama running: classify → structure → entities
