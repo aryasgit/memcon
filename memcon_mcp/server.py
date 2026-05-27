@@ -30,9 +30,11 @@ from config import cfg
 from memory.retrieve import query as _query
 from memory.writer import (
     log_debug, log_decision, log_experiment,
-    update_note, summarise_session,
+    log_concept, log_reference, log_meeting, log_breakthrough,
+    log_universal, update_note, summarise_session,
 )
 from memory.qdrant_store import ensure_collection, get_stats
+from memory.templates import ALL_KINDS
 
 mcp = FastMCP("memcon")
 
@@ -194,23 +196,46 @@ def memcon_update_note(filepath: str, content: str) -> dict:
 @mcp.tool()
 def memcon_stats() -> dict:
     """
-    Project info — chunk count, collection name, project name. Cheap diagnostic.
+    Project info — chunk count, collection name, project name, entity index
+    size. Cheap diagnostic. Call this when the user asks "how big is my
+    memory?" or "what's in my vault?".
     """
     s = get_stats()
     s["project"] = cfg('project', 'name')
     s["domain"] = cfg('project', 'domain')
+    try:
+        from memory.entity_index import stats as _entity_stats
+        s["entity_index"] = _entity_stats()
+    except Exception as e:
+        s["entity_index"] = {"error": str(e)}
     return s
 
 
 @mcp.tool()
 def memcon_subsystems() -> dict:
     """
-    List the configured subsystems for this project. Use as a guide when
-    deciding which `subsystem` value to pass to write/query tools.
+    List the configured subsystems + note kinds for this project. Use this
+    as a guide when picking a `subsystem` for write tools, or when telling
+    the user which kinds of notes Memcon can produce.
+
+    Returns:
+        subsystems    — list of configured subsystem tags (can be empty,
+                        meaning "accept any string").
+        memory_types  — legacy field, still emitted for back-compat.
+        note_kinds    — the full set of note types Memcon understands.
     """
+    try:
+        subs = list(cfg('subsystems') or [])
+    except Exception:
+        subs = []
+    try:
+        mtypes = list(cfg('memory_types') or [])
+    except Exception:
+        mtypes = []
     return {
-        "subsystems": cfg('subsystems'),
-        "memory_types": cfg('memory_types'),
+        "subsystems":   subs,
+        "memory_types": mtypes,
+        "note_kinds":   list(ALL_KINDS),
     }
 
 
@@ -360,155 +385,196 @@ def memcon_digest(since_days: int = 7) -> dict:
 
 
 @mcp.tool()
-def memcon_capture(text: str, hint: str = "auto") -> dict:
+def memcon_capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     """
     DEFAULT WRITE TOOL — use this for ANY user instruction of the form
     "save this", "log this", "remember this", "save the debugging session",
     "log my decision", etc. Do NOT ask the user to spell out title/symptom/
     cause/fix yourself; instead, summarise the relevant span of the current
-    conversation into `text` and call this tool. The local LLM running
-    inside memcon will extract the structured fields itself.
+    conversation into `text` (the richer, the better — paragraphs, code,
+    error logs, conversation excerpts — anything that gives the extractor
+    something to work with) and call this tool. The local LLM runs a
+    multi-pass extraction pipeline internally:
 
-    Concretely, when the user says ONE of:
-      • "save this"  /  "save it"  /  "log this"
+      1. CLASSIFY — picks the best kind from:
+         debug | decision | experiment | concept | reference | meeting |
+         breakthrough | session
+      2. STRUCTURE — fills the per-kind sections (TL;DR + type-specific
+         fields). Preserves a verbatim ## Context excerpt for embedding.
+      3. ENTITIES — extracts files / symbols / errors / packages / urls /
+         concepts mentioned, for keyword-exact recall later.
+      4. (optional) CRITIQUE — second pass that re-reads the draft against
+         the source. Only enable for long, complex inputs (doubles runtime).
+
+    The note is then written with rich frontmatter (id, type, created,
+    updated, subsystem, tags, status, confidence, entities, git, linked) and
+    auto-linked to its top-3 semantic neighbours via Obsidian [[wikilinks]].
+    A background pass adds git context + a `## See also` block after the
+    write returns.
+
+    When the user says ANY of:
+      • "save this"  /  "save it"  /  "log this"  /  "remember this"
       • "save the debugging session"  /  "log this debug"
       • "save my decision (to use X)"  /  "log this decision"
       • "remember this experiment"  /  "log the experiment"
+      • "save this concept"  /  "store this reference"  /  "log meeting notes"
       • "session summary"  /  "save today's session"
+      → call this tool with a rich `text`.
 
-    → look back over the recent conversation, write a clear paragraph that
-       describes what happened (the problem, the cause if known, the fix if
-       known — or the decision and its reasoning, etc.), and pass that as
-       `text`. Always include enough detail that someone reading the saved
-       note cold would understand it.
-
-    Auto-routes to debug | decision | experiment | session_summary based on
-    content, unless `hint` forces a kind. Auto-links to the top-3
-    semantically related existing notes via Obsidian [[wikilinks]].
-
-    ONLY fall back to memcon_write_debug / _decision / _experiment /
-    session_summary when the user is explicitly giving you pre-structured
-    fields ("title: ..., symptom: ..., fix: ...").
+    ONLY fall back to memcon_write_* when the user is explicitly providing
+    pre-structured fields ("title: ..., symptom: ..., fix: ...").
 
     Args:
-        text: The content to capture. Pass a self-contained paragraph
-              summarising the conversation — NOT a one-word command. The
-              richer the text, the better the structured extraction.
-        hint: "auto" (default) lets the LLM pick. Force with
-              "debug" | "decision" | "experiment" | "session".
+        text:         The content to capture — paragraphs, code, errors, logs.
+                      The richer the text, the better the extraction.
+        hint:         "auto" (default) lets the classifier pick. Force one of:
+                      "debug" | "decision" | "experiment" | "concept" |
+                      "reference" | "meeting" | "breakthrough" | "session".
+        run_critique: If True, run a self-critique pass (doubles time, helps
+                      on long inputs). Default False.
 
-    Returns: { "status", "kind", "path", "extracted" }
-
-    Example invocation (after a debugging conversation):
-        memcon_capture(text="The RR servo overheated during backward gait.
-            Diagnosed as vibration-loosened wiring causing power brownouts
-            from servo current spikes. Fixed by re-seating the connectors
-            and bumping the bench PSU current limit from 3A to 5A.")
+    Returns: { "status", "kind", "path", "title", "subsystem", "confidence",
+               "entities", "passes_run" }
     """
-    import json as _json
-    import re as _re
-    from openai import OpenAI
-    from dotenv import load_dotenv
-    load_dotenv()
+    from memory.extractor import extract as _extract
 
-    llm = OpenAI(
-        base_url=cfg('llm', 'base_url'),
-        api_key=os.getenv("LLM_API_KEY", "ollama"),
+    # Allowed subsystems from config — used as a soft constraint in the prompt.
+    try:
+        subs = list(cfg('subsystems') or [])
+    except Exception:
+        subs = []
+
+    try:
+        result = _extract(text, hint=hint, run_critique=run_critique, valid_subsystems=subs or None)
+    except Exception as e:
+        return {"error": f"extraction failed: {e}",
+                "fallback": "use memcon_write_debug/decision/experiment/concept/reference/meeting/breakthrough/session_summary directly"}
+
+    kind = result["kind"]
+    if kind not in ALL_KINDS:
+        kind = "debug"
+
+    # If subsystems are constrained and the model picked one outside the list,
+    # demote to "unknown" so retrieval filters don't silently drop the note.
+    subsystem = result["subsystem"]
+    if subs and subsystem not in subs:
+        subsystem = "unknown"
+
+    path = log_universal(
+        kind=kind,
+        title=result["title"],
+        fields=result["fields"],
+        subsystem=subsystem,
+        tags=result["tags"],
+        status=result["status"],
+        confidence=result["confidence"],
+        entities=result["entities"],
     )
 
-    subs = cfg('subsystems')
-    sub_list = ", ".join(subs)
-    type_hint = "" if hint == "auto" else f"\nThe user explicitly tagged this as kind=\"{hint}\". Use that kind."
+    return {
+        "status":     "written",
+        "kind":       kind,
+        "path":       path,
+        "title":      result["title"],
+        "subsystem":  subsystem,
+        "confidence": result["confidence"],
+        "entities":   result["entities"],
+        "passes_run": result["meta"]["passes_run"],
+    }
 
-    prompt = f"""You are a structuring assistant. Read the input below and emit a single JSON object that fits one of these schemas. Pick the kind that fits best.{type_hint}
 
-KIND = "debug":
-  {{"kind":"debug","title":"...","symptom":"...","cause":"...","fix":"...","status":"open|fixed|investigating","subsystem":"<one of: {sub_list}>","tags":["..."]}}
+# ──────────────────────────────────────────────────────────────────────────────
+# Concept / Reference / Meeting / Breakthrough — new note types in v3.1
+# ──────────────────────────────────────────────────────────────────────────────
 
-KIND = "decision":
-  {{"kind":"decision","title":"...","decision":"...","reasoning":"...","subsystem":"<one of: {sub_list}>","tags":["..."]}}
+@mcp.tool()
+def memcon_write_concept(
+    title: str,
+    definition: str,
+    why: str = "",
+    example: str = "",
+    pitfalls: str = "",
+    subsystem: str = "unknown",
+    tags: list[str] | None = None,
+) -> dict:
+    """
+    Save a concept / definition / mental model note. Use this when the user
+    teaches you a domain term, explains a system invariant, or defines a
+    "what is X" that should survive to future sessions.
+    """
+    path = log_concept(
+        title=title, definition=definition, why=why,
+        example=example, pitfalls=pitfalls,
+        subsystem=subsystem, tags=tags or [],
+    )
+    return {"status": "written", "kind": "concept", "path": path}
 
-KIND = "experiment":
-  {{"kind":"experiment","title":"...","hypothesis":"...","result":"...","conclusion":"...","subsystem":"<one of: {sub_list}>","tags":["..."]}}
 
-KIND = "session":
-  {{"kind":"session","summary":"...","subsystem":"<one of: {sub_list}>"}}
+@mcp.tool()
+def memcon_write_reference(
+    title: str,
+    summary: str,
+    key_points: str = "",
+    notes: str = "",
+    source: str = "",
+    subsystem: str = "unknown",
+    tags: list[str] | None = None,
+) -> dict:
+    """
+    Save a reference note — an API/spec/external resource captured locally
+    so the relevant bits survive even if the source URL rots.
+    """
+    path = log_reference(
+        title=title, summary=summary, key_points=key_points,
+        notes=notes, source=source,
+        subsystem=subsystem, tags=tags or [],
+    )
+    return {"status": "written", "kind": "reference", "path": path}
 
-Rules:
-- Title: <= 60 chars, descriptive, no quotes.
-- subsystem MUST be one of the listed values, else "unknown".
-- tags: 2-5 lowercase kebab-case terms, no #.
-- If a field is genuinely unknown, use an empty string "" (not null).
-- Output ONLY the JSON object. No markdown fences, no commentary, no leading text.
 
-INPUT:
-{text}
+@mcp.tool()
+def memcon_write_meeting(
+    title: str,
+    notes: str,
+    attendees: str = "",
+    decisions: str = "",
+    actions: str = "",
+    subsystem: str = "unknown",
+    tags: list[str] | None = None,
+) -> dict:
+    """
+    Save meeting / sync notes. `decisions` and `actions` get their own
+    sections so they're separately searchable.
+    """
+    path = log_meeting(
+        title=title, notes=notes, attendees=attendees,
+        decisions=decisions, actions=actions,
+        subsystem=subsystem, tags=tags or [],
+    )
+    return {"status": "written", "kind": "meeting", "path": path}
 
-JSON:"""
 
-    try:
-        resp = llm.chat.completions.create(
-            model=cfg('llm', 'model'),
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=cfg('llm', 'max_tokens'),
-            temperature=0.1,
-        )
-        raw = resp.choices[0].message.content.strip()
-    except Exception as e:
-        return {"error": f"LLM call failed: {e}", "fallback": "use memcon_write_debug/decision/experiment/session_summary directly"}
-
-    # Strip code fences if the model wrapped output anyway
-    raw = _re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=_re.IGNORECASE | _re.MULTILINE).strip()
-    # Grab the first {...} block to be defensive
-    m = _re.search(r"\{.*\}", raw, _re.DOTALL)
-    if not m:
-        return {"error": "LLM did not return JSON", "raw_response": raw[:400]}
-    try:
-        data = _json.loads(m.group(0))
-    except _json.JSONDecodeError as e:
-        return {"error": f"could not parse JSON: {e}", "raw_response": raw[:400]}
-
-    kind = (data.get("kind") or hint or "debug").lower()
-    subsystem = data.get("subsystem") or "unknown"
-    if subsystem not in subs:
-        subsystem = "unknown"
-    tags = data.get("tags") or []
-
-    if kind == "decision":
-        path = log_decision(
-            title=data.get("title", "(untitled decision)"),
-            decision=data.get("decision", ""),
-            reasoning=data.get("reasoning", ""),
-            subsystem=subsystem,
-            tags=tags,
-        )
-    elif kind == "experiment":
-        path = log_experiment(
-            title=data.get("title", "(untitled experiment)"),
-            hypothesis=data.get("hypothesis", ""),
-            result=data.get("result", ""),
-            conclusion=data.get("conclusion", ""),
-            subsystem=subsystem,
-            tags=tags,
-        )
-    elif kind == "session":
-        path = summarise_session(
-            summary=data.get("summary", text),
-            subsystem=subsystem,
-        )
-    else:  # debug (default)
-        kind = "debug"
-        path = log_debug(
-            title=data.get("title", "(untitled debug session)"),
-            symptom=data.get("symptom", text[:200]),
-            cause=data.get("cause", ""),
-            fix=data.get("fix", ""),
-            status=data.get("status", "open"),
-            subsystem=subsystem,
-            tags=tags,
-        )
-
-    return {"status": "written", "kind": kind, "path": path, "extracted": data}
+@mcp.tool()
+def memcon_write_breakthrough(
+    title: str,
+    insight: str,
+    background: str = "",
+    implication: str = "",
+    next_steps: str = "",
+    subsystem: str = "unknown",
+    tags: list[str] | None = None,
+) -> dict:
+    """
+    Save a breakthrough / "aha" insight. Use when the user names a moment
+    where understanding shifted — the kind of thing you want to find six
+    months later.
+    """
+    path = log_breakthrough(
+        title=title, insight=insight, background=background,
+        implication=implication, next_steps=next_steps,
+        subsystem=subsystem, tags=tags or [],
+    )
+    return {"status": "written", "kind": "breakthrough", "path": path}
 
 
 def main() -> None:

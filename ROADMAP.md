@@ -49,6 +49,59 @@ at [`v2.0.0`](https://github.com/aryasgit/memcon/releases/tag/v2.0.0).
 
 ---
 
+## v3.1 — *Rich notes, hybrid recall* 🚧 **in progress**
+
+The schema generalises. The local LLM now extracts in **four passes** instead
+of one — what gets stored is richer, what gets retrieved is more accurate.
+All still local.
+
+**Layer 1 — Universal note schema** *(✅ shipped)*
+- [x] `memory/templates.py` — 8 note kinds (debug / decision / experiment /
+      concept / reference / meeting / breakthrough / session) with per-kind
+      sections, shared outer shape (TL;DR + Context + Related + See also)
+- [x] Rich frontmatter: `id`, `type`, `created`, `updated`, `subsystem` (now
+      a list), `tags`, `status`, `confidence`, `entities` (six categories),
+      `git` ({commit, branch, changed_files}), `linked` (Obsidian wikilinks)
+- [x] `memory/writer.py` refactor: `log_universal(kind, title, fields, …)` as
+      the canonical entry; back-compat wrappers `log_debug/_decision/…`
+      preserved; new `log_concept / log_reference / log_meeting / log_breakthrough`
+- [x] Verbatim `## Context` preserved on every note — the embedder finally has
+      real prose to grip onto, not a 4-line skeleton
+
+**Layer 2 — Multi-pass extraction** *(✅ shipped)*
+- [x] `memory/extractor.py`: `classify_type` → `extract_structure` →
+      `extract_entities` → optional `self_critique`, all in Ollama JSON mode
+- [x] `memcon_capture` rewired through the pipeline; returns the kind picked,
+      confidence, and the entity dict so Claude can quote it
+- [x] Four new MCP tools: `memcon_write_concept / _reference / _meeting /
+      _breakthrough`. Total MCP surface now **16 tools**.
+
+**Layer 3 — Entity-indexed hybrid retrieval** *(✅ shipped)*
+- [x] `memory/entity_index.py` — SQLite inverted index at
+      `{vault}/.memcon/entities.db` keyed by (entity_lc, kind, doc_name);
+      `index_note()` / `clear_doc()` / `lookup()` / `stats()`
+- [x] `memory/retrieve.query()` is now **hybrid**: semantic Qdrant hits +
+      entity-index hits merged and reranked. Output adds `via` (semantic /
+      entity / both) and `entity_hits` fields. `memcon_query` benefits
+      automatically — every read tool picks up keyword-exact recall for free.
+
+**Layer 4 — Auto-enrichment** *(✅ shipped)*
+- [x] `memory/enricher.py` — background thread spawned after every write:
+      detects git context (`commit`, `branch`, `changed_files`) from the
+      project root, generates a `## See also` block with one-line summaries
+      pulled from each related note's TL;DR. Non-blocking — write returns
+      instantly.
+
+**Still to land before tagging v3.1.0:**
+- [ ] Migration script: backfill old 4-field notes into the new schema
+      (lift `## Symptom` → `tldr`, run entity extractor over the existing body)
+- [ ] `memcon_pattern(topic)` — first crack at v4 contradiction/pattern
+      detection, built on the entity index + semantic graph
+- [ ] End-to-end test with Ollama running: classify → structure → entities
+      → write → query (verify hybrid recall on real notes)
+
+---
+
 ## v3.0 — *Lives in your editor* 🚧 **in progress**
 
 The moat feature. Once Memcon is inline in VS Code / Cursor, engineers don't
