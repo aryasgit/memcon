@@ -111,14 +111,15 @@ else
     gitpython rich openai pyyaml mcp
 fi
 
-# ── PULL LLM MODEL ───────────────────────
-echo "📦 Pulling LLM: $SELECTED_MODEL (may take a few minutes)..."
-ollama pull "$SELECTED_MODEL"
-
-# ── START QDRANT ──────────────────────────
-echo "🐳 Starting Qdrant..."
-docker compose up -d
-sleep 3
+# ── REGISTER MCP IN CLAUDE DESKTOP (EARLY — before anything fragile) ──
+# This MUST run before the service steps below. Registration only needs the
+# venv + server.py — never Docker/Qdrant/Ollama. Previously it ran LAST, so a
+# hiccup in `docker compose`/ingest under `set -e` aborted the whole install
+# before Claude was ever configured (the "downloads succeeded but no MCP" bug).
+if [ -z "$MEMCON_SKIP_MCP" ]; then
+  echo "🔌 Registering Memcon with Claude Desktop..."
+  python3 scripts/register_mcp.py || echo "   (registration skipped — re-run later: .venv/bin/python3 scripts/register_mcp.py)"
+fi
 
 # ── VAULT STRUCTURE ───────────────────────
 # Folders match the v3.1 note kinds (templates.FOLDER_FOR). The writer also
@@ -132,17 +133,23 @@ if [ ! -f .env ]; then
   echo "⚠️  .env created — edit if needed"
 fi
 
-# ── INITIAL INGEST ────────────────────────
-echo "📥 Ingesting vault..."
-python3 scripts/ingest_all.py
+# ── RUNTIME (non-fatal) ───────────────────
+# Memcon is already registered with Claude above. The steps below bring up the
+# runtime; if Docker isn't running or a download hiccups, DON'T abort — the user
+# can finish later with ./start.sh. set +e makes these best-effort.
+set +e
 
-# ── REGISTER MCP IN CLAUDE DESKTOP ────────
-# Idempotent — preserves any other MCP servers already configured.
-# Set MEMCON_SKIP_MCP=1 to opt out.
-if [ -z "$MEMCON_SKIP_MCP" ]; then
-  echo ""
-  python3 scripts/register_mcp.py || echo "   (MCP registration is optional — Memcon still works standalone)"
-fi
+echo "📦 Pulling LLM: $SELECTED_MODEL (may take a few minutes)..."
+ollama pull "$SELECTED_MODEL" || echo "   ⚠️  model pull failed — run later: ollama pull $SELECTED_MODEL"
+
+echo "🐳 Starting Qdrant..."
+docker compose up -d || echo "   ⚠️  Qdrant didn't start — is Docker running? run later: docker compose up -d"
+sleep 3
+
+echo "📥 Ingesting vault..."
+python3 scripts/ingest_all.py || echo "   ⚠️  initial ingest skipped — run later: .venv/bin/python3 scripts/ingest_all.py"
+
+set -e
 
 echo ""
 echo "╔══════════════════════════════════════╗"
