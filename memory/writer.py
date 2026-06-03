@@ -162,6 +162,8 @@ def log_universal(
     git: dict | None = None,
     project: str | None = None,
     extras: dict | None = None,
+    sections: list | None = None,
+    overwrite: bool = False,
     enrich: bool = True,
 ) -> str:
     """Write any kind of note to the vault.
@@ -191,6 +193,24 @@ def log_universal(
     related = _find_related(semantic_query_text, exclude_doc=slug)  # [{doc_name, score}]
     related_names = _doc_names(related)
 
+    # Adaptive template (B2): grow the section list from the problem-specific
+    # sections that recur across the most-related notes. Caller can override by
+    # passing `sections` explicitly.
+    if sections is None:
+        try:
+            from memory.templates import adaptive_sections
+            related_texts = []
+            for dn in related_names:
+                p = _resolve_note_path(dn)
+                if p:
+                    try:
+                        related_texts.append(p.read_text(errors="ignore"))
+                    except OSError:
+                        pass
+            sections = adaptive_sections(kind, related_texts)
+        except Exception:
+            sections = None
+
     # Merge "linked" frontmatter list — caller can pre-seed it, related fills gaps
     linked_set: list[str] = list(dict.fromkeys(list(extras.pop("linked", []) if extras else []) + related_names))
 
@@ -213,21 +233,22 @@ def log_universal(
         extras=extras,
     )
 
-    content = render(kind=kind, title=title, fields=fields, meta=meta)
+    content = render(kind=kind, title=title, fields=fields, meta=meta, sections=sections)
 
     folder = FOLDER_FOR.get(kind, "debugging")
     target_dir = VAULT / folder
     target_dir.mkdir(parents=True, exist_ok=True)
     filepath = target_dir / f"{slug}.md"
 
-    if filepath.exists():
+    if filepath.exists() and not overwrite:
         # Append-on-exists: preserve the original frontmatter, append a divider
         # + an Update block with the new body sections. This way recurrence is
-        # naturally preserved.
+        # naturally preserved. (overwrite=True is used by the async capture path
+        # to replace a provisional note with its fully-structured version.)
         with open(filepath, 'a') as f:
             f.write(
                 f"\n\n---\n*Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*\n\n"
-                + render_body(kind, title, fields)
+                + render_body(kind, title, fields, sections=sections)
             )
     else:
         with open(filepath, 'w') as f:

@@ -70,6 +70,9 @@ def _ask_json(prompt: str, *, max_tokens: int | None = None, temperature: float 
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": mt,
                 "temperature": temperature,
+                # Hard ceiling per call so a hung/overloaded local model can't
+                # wedge a background extraction thread forever.
+                "timeout": 120,
             }
             if use_json_mode:
                 kwargs["response_format"] = {"type": "json_object"}

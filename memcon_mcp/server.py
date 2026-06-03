@@ -430,25 +430,15 @@ def memcon_capture(text: str, hint: str = "auto", run_critique: bool = False) ->
     "log my decision", etc. Do NOT ask the user to spell out title/symptom/
     cause/fix yourself; instead, summarise the relevant span of the current
     conversation into `text` (the richer, the better — paragraphs, code,
-    error logs, conversation excerpts — anything that gives the extractor
-    something to work with) and call this tool. The local LLM runs a
-    multi-pass extraction pipeline internally:
+    error logs, conversation excerpts) and call this tool.
 
-      1. CLASSIFY — picks the best kind from:
-         debug | decision | experiment | concept | reference | meeting |
-         breakthrough | session
-      2. STRUCTURE — fills the per-kind sections (TL;DR + type-specific
-         fields). Preserves a verbatim ## Context excerpt for embedding.
-      3. ENTITIES — extracts files / symbols / errors / packages / urls /
-         concepts mentioned, for keyword-exact recall later.
-      4. (optional) CRITIQUE — second pass that re-reads the draft against
-         the source. Only enable for long, complex inputs (doubles runtime).
-
-    The note is then written with rich frontmatter (id, type, created,
-    updated, subsystem, tags, status, confidence, entities, git, linked) and
-    auto-linked to its top-3 semantic neighbours via Obsidian [[wikilinks]].
-    A background pass adds git context + a `## See also` block after the
-    write returns.
+    THIS CALL RETURNS INSTANTLY. It writes a note immediately with your raw
+    text preserved (already searchable), then runs the multi-pass local-LLM
+    extraction IN THE BACKGROUND to fill in structured sections + entities +
+    the adaptive template. You do NOT need to wait, poll, or re-call — the
+    structuring completes on its own within ~a minute. (This is deliberate:
+    the extraction can take minutes on a long input with a local model, which
+    would otherwise blow past the MCP tool-call timeout. Never block on it.)
 
     When the user says ANY of:
       • "save this"  /  "save it"  /  "log this"  /  "remember this"
@@ -464,61 +454,25 @@ def memcon_capture(text: str, hint: str = "auto", run_critique: bool = False) ->
 
     Args:
         text:         The content to capture — paragraphs, code, errors, logs.
-                      The richer the text, the better the extraction.
-        hint:         "auto" (default) lets the classifier pick. Force one of:
-                      "debug" | "decision" | "experiment" | "concept" |
+                      The richer the text, the better the background extraction.
+        hint:         "auto" (default) lets the classifier pick the kind. Force
+                      one of: "debug" | "decision" | "experiment" | "concept" |
                       "reference" | "meeting" | "breakthrough" | "session".
-        run_critique: If True, run a self-critique pass (doubles time, helps
-                      on long inputs). Default False.
+        run_critique: Adds a self-critique pass to the BACKGROUND extraction
+                      (slower, slightly higher quality). Safe to enable — it
+                      runs off the tool-call thread, so it never affects this
+                      call's latency. Default False.
 
-    Returns: { "status", "kind", "path", "title", "subsystem", "confidence",
-               "entities", "passes_run" }
+    Returns instantly: { "status": "saved", "kind", "path", "note" }
+    The note at `path` exists and is searchable immediately; structured
+    sections + entities appear shortly after.
     """
-    from memory.extractor import extract as _extract
-
-    # Allowed subsystems from config — used as a soft constraint in the prompt.
+    from memory.capture import capture as _capture
     try:
-        subs = list(cfg('subsystems') or [])
-    except Exception:
-        subs = []
-
-    try:
-        result = _extract(text, hint=hint, run_critique=run_critique, valid_subsystems=subs or None)
+        return _capture(text, hint=hint, run_critique=run_critique)
     except Exception as e:
-        return {"error": f"extraction failed: {e}",
+        return {"error": f"capture failed: {e}",
                 "fallback": "use memcon_write_debug/decision/experiment/concept/reference/meeting/breakthrough/session_summary directly"}
-
-    kind = result["kind"]
-    if kind not in ALL_KINDS:
-        kind = "debug"
-
-    # If subsystems are constrained and the model picked one outside the list,
-    # demote to "unknown" so retrieval filters don't silently drop the note.
-    subsystem = result["subsystem"]
-    if subs and subsystem not in subs:
-        subsystem = "unknown"
-
-    path = log_universal(
-        kind=kind,
-        title=result["title"],
-        fields=result["fields"],
-        subsystem=subsystem,
-        tags=result["tags"],
-        status=result["status"],
-        confidence=result["confidence"],
-        entities=result["entities"],
-    )
-
-    return {
-        "status":     "written",
-        "kind":       kind,
-        "path":       path,
-        "title":      result["title"],
-        "subsystem":  subsystem,
-        "confidence": result["confidence"],
-        "entities":   result["entities"],
-        "passes_run": result["meta"]["passes_run"],
-    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
