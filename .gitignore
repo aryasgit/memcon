@@ -15,11 +15,11 @@ vault/*.canvas
 vault/*.base
 
 # Private project docs — never ship these to the public repo.
-# (strategy, monetization, internal robot architecture, personal planning)
-vault/decisions/ENGRAM_TRANSFORMATION_ROADMAP.md
-vault/BARQ_HIVE_REFERENCE.md
+# (strategy, monetization, internal architecture, personal planning)
 vault/**/*PRIVATE*
 vault/**/*STRATEGY*
+vault/**/*ROADMAP*
+vault/**/*_REFERENCE.md
 
 # Entity index DB (v3.1) — regenerated locally, never commit
 vault/.memcon/
