@@ -111,6 +111,44 @@ def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
 
 
 @mcp.tool()
+def memcon_recall(problem: str, k: int = 5) -> dict:
+    """
+    THE flagship recall tool — reach for this the MOMENT the user hits a
+    problem, bug, error, regression, or asks "have we dealt with this before?"
+    / "didn't this happen already?" / "what did we try last time?".
+
+    Unlike memcon_query (which returns raw chunks), memcon_recall returns a
+    FUSED PLATTER of the most relevant past work, ranked by three axes at once:
+
+      • SIMILAR  — past notes semantically matching the current problem
+      • RECENT   — lifted toward the latest attempt, because the approach
+                   evolves and the newest try reflects current reality
+      • OUTCOME  — every match labelled resolved / open / failed, so a past
+                   FAILURE warns you ("you tried X, it didn't hold") and a
+                   past FIX answers you ("last time this was fixed by Y")
+
+    It also returns a one-line `summary` like:
+        "You've hit something like this 3 times. Most recent (11d ago) was
+         fixed by: re-seated connectors + bumped PSU 3A→5A."
+
+    Use memcon_recall for debugging / "am I repeating myself?" moments; use
+    memcon_query only when you want raw context chunks to reason over.
+
+    Args:
+        problem: natural-language description of what's happening NOW
+                 (e.g. "RR servo overheating during backward gait again").
+        k: how many past matches to return. Default 5.
+
+    Returns: { problem, summary,
+               matches: [{doc_name, title, similarity, age_days, recency,
+                          score, outcome, what_was_tried, excerpt}],
+               count }
+    """
+    from memory.recall import recall as _recall
+    return _recall(problem, k=k)
+
+
+@mcp.tool()
 def memcon_write_debug(
     title: str,
     symptom: str,

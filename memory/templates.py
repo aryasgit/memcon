@@ -189,11 +189,17 @@ def _section(title: str, body: str) -> str:
     return f"## {title}\n\n{body}\n"
 
 
-def render_body(kind: str, title: str, fields: dict) -> str:
-    """Render the H1 + per-type sections + tail sections."""
+def render_body(kind: str, title: str, fields: dict, sections: list | None = None) -> str:
+    """Render the H1 + middle sections + tail sections.
+
+    `sections` overrides the frozen per-kind skeleton with an explicit list of
+    (title, field_name, fallback) tuples — this is how adaptive templates inject
+    problem-specific sections inherited from related notes. When None, falls back
+    to the static SECTIONS_FOR[kind].
+    """
     out: list[str] = [f"# {title}\n"]
 
-    specs = SECTIONS_FOR.get(kind, SECTIONS_FOR["debug"])
+    specs = sections if sections is not None else SECTIONS_FOR.get(kind, SECTIONS_FOR["debug"])
     for section_title, field_name, fallback in specs:
         value = fields.get(field_name) or fallback
         chunk = _section(section_title, value)
@@ -206,6 +212,75 @@ def render_body(kind: str, title: str, fields: dict) -> str:
             out.append(chunk)
 
     return "\n".join(out).rstrip() + "\n"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Adaptive templates — sections that LEARN per problem-domain
+#
+# A new note starts from its kind's frozen skeleton, then INHERITS the
+# problem-specific sections that recur across its most-related past notes. So the
+# 3rd+ servo-thermal note auto-adopts "## Temperature curve" once earlier ones
+# share it — and similar problems end up structurally aligned, which is exactly
+# what makes memcon_recall able to line them up apples-to-apples.
+# ──────────────────────────────────────────────────────────────────────────────
+
+import re as _re_mod
+
+# How many related notes must share an extra section before it's inherited.
+# 2 = genuine recurrence (kills one-off noise from a single related note).
+RECUR_MIN = 2
+
+
+def parse_section_titles(markdown: str) -> list[str]:
+    """Every `## Heading` in a markdown note, in order."""
+    return [m.group(1).strip() for m in _re_mod.finditer(r"^##\s+(.+?)\s*$", markdown, _re_mod.MULTILINE)]
+
+
+def _standard_titles(kind: str) -> set[str]:
+    """Section titles that are part of the frozen skeleton or the shared tail —
+    i.e. NOT problem-specific. Used to isolate the 'extra' sections in a note."""
+    std = {t for t, _f, _fb in SECTIONS_FOR.get(kind, [])}
+    tail = {t for t, _f in TAIL_SECTIONS}
+    return std | tail
+
+
+def adaptive_sections(
+    kind: str,
+    related_texts: list[str],
+    *,
+    recur_min: int = RECUR_MIN,
+) -> list[tuple[str, str, str]]:
+    """Build the section spec for a new note of `kind`, given the markdown of its
+    most-related past notes.
+
+    = the frozen skeleton  +  problem-specific sections that appear in
+    >= recur_min of the related notes (slotted just before the skeleton's final
+    resolution sections). Extra fields are keyed `x_<slug>` so the extractor
+    fills them and render reads them back.
+
+    Returns a list of (section_title, field_name, fallback) — drop-in for
+    render_body(sections=...).
+    """
+    base = list(SECTIONS_FOR.get(kind, SECTIONS_FOR["debug"]))
+    std = _standard_titles(kind)
+
+    from collections import Counter
+    counts: Counter = Counter()
+    for txt in related_texts or []:
+        for title in dict.fromkeys(parse_section_titles(txt)):   # dedupe within a note
+            if title not in std:
+                counts[title] += 1
+
+    extras = [t for t, c in counts.items() if c >= recur_min]
+    extra_specs = [(t, "x_" + _slug(t), "") for t in extras]
+    if not extra_specs:
+        return base
+
+    # Slot problem-specific sections before the final two skeleton sections
+    # (the resolution pair, e.g. Fix/Verification), so evidence precedes outcome.
+    if len(base) >= 2:
+        return base[:-2] + extra_specs + base[-2:]
+    return base + extra_specs
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -278,6 +353,7 @@ def render(
     title: str,
     fields: dict,
     meta: dict | None = None,
+    sections: list | None = None,   # explicit section spec (adaptive templates)
     # Convenience args — if `meta` not supplied, these build it
     note_id: str = "",
     subsystem: str | list[str] = "unknown",
@@ -311,7 +387,7 @@ def render(
             project=project,
         )
     fm = render_frontmatter(meta)
-    body = render_body(kind, title, fields)
+    body = render_body(kind, title, fields, sections=sections)
     return f"{fm}\n\n{body}"
 
 

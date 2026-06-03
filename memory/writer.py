@@ -46,35 +46,96 @@ VAULT = Path(cfg('vault', 'path'))
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _find_related(query_text: str, exclude_doc: str, top_k: int = 4, max_links: int = 3) -> list[str]:
-    """Return up to `max_links` doc_names semantically nearest to query_text.
+# Cosine floor for a backlink. The audit showed real matches sit at 0.5–0.7 and
+# unrelated noise at ~0.05, so 0.30 keeps every true link and rejects spurious
+# ones. Below this, two notes are not "related" — don't wire them together.
+RELATED_MIN_SCORE = 0.30
 
-    Excludes the note we're about to write (by doc_name) so a note never
-    links to itself. Best-effort: any failure (no embedder, no Qdrant, empty
-    vault) returns [].
+
+def _find_related(
+    query_text: str,
+    exclude_doc: str,
+    top_k: int = 6,
+    max_links: int = 3,
+    min_score: float = RELATED_MIN_SCORE,
+) -> list[dict]:
+    """Return up to `max_links` notes genuinely related to query_text, as
+    `[{"doc_name", "score"}]`, filtered by a cosine threshold.
+
+    Uses PURE semantic similarity (not the hybrid score) so `min_score` is an
+    interpretable cosine. Excludes the note we're about to write so it never
+    links to itself. Best-effort: any failure (no embedder, Qdrant down, empty
+    vault) returns []. The threshold is what stops a sparse vault from wiring
+    every note to every other note.
     """
     try:
-        from memory.retrieve import query as _semantic_query
-        results = _semantic_query(query_text, top_k=top_k)
+        from memory.retrieve import query_semantic
+        results = query_semantic(query_text, top_k=top_k)
     except Exception:
         return []
     seen, out = set(), []
     for r in results:
         dn = r.get('doc_name')
+        score = float(r.get('score', 0) or 0)
         if not dn or dn == exclude_doc or dn in seen:
             continue
+        if score < min_score:
+            continue  # below the relevance floor — skip (kills spurious links)
         seen.add(dn)
-        out.append(dn)
+        out.append({"doc_name": dn, "score": round(score, 4)})
         if len(out) >= max_links:
             break
     return out
 
 
-def _related_md(links: list[str]) -> str:
-    """Build the body of the ## Related section from a list of doc_names."""
-    if not links:
+def _doc_names(related: list) -> list[str]:
+    """Pull plain doc_names from a related list (dicts or bare strings)."""
+    return [r["doc_name"] if isinstance(r, dict) else r for r in related]
+
+
+def _related_md(links: list) -> str:
+    """Build the body of the ## Related section from related items
+    (accepts dicts from _find_related, or plain doc_name strings)."""
+    names = _doc_names(links)
+    if not names:
         return ""
-    return "\n".join(f"- [[{name}]]" for name in links)
+    return "\n".join(f"- [[{name}]]" for name in names)
+
+
+def _resolve_note_path(doc_name: str) -> Path | None:
+    """Find {vault}/**/{doc_name}.md. Returns the Path or None."""
+    matches = list(VAULT.rglob(f"{doc_name}.md"))
+    return matches[0] if matches else None
+
+
+def _add_reciprocal_link(target_doc: str, source_slug: str) -> None:
+    """Idempotently add `[[source_slug]]` to `target_doc`'s ## Related section,
+    so the link is symmetric in the markdown — a human reading either note sees
+    the connection, not just Obsidian's backlinks panel. No-op if already
+    present or the target file can't be found."""
+    if target_doc == source_slug:
+        return
+    path = _resolve_note_path(target_doc)
+    if not path:
+        return
+    try:
+        text = path.read_text()
+    except OSError:
+        return
+    link = f"[[{source_slug}]]"
+    if link in text:
+        return  # already linked — idempotent
+    import re as _re
+    m = _re.search(r"^##\s+Related\s*$", text, _re.MULTILINE)
+    if m:
+        insert_at = m.end()  # just after the "## Related" line, before its newline
+        new_text = text[:insert_at] + f"\n- {link}" + text[insert_at:]
+    else:
+        new_text = text.rstrip() + f"\n\n## Related\n- {link}\n"
+    try:
+        path.write_text(new_text)
+    except OSError:
+        return
 
 
 def _project_name() -> str:
@@ -127,10 +188,11 @@ def log_universal(
     # title + the first big body field as the query text so neighbours match
     # the *substance* of the note, not just its name.
     semantic_query_text = title + "\n" + _semantic_summary(kind, fields)
-    related = _find_related(semantic_query_text, exclude_doc=slug)
+    related = _find_related(semantic_query_text, exclude_doc=slug)  # [{doc_name, score}]
+    related_names = _doc_names(related)
 
     # Merge "linked" frontmatter list — caller can pre-seed it, related fills gaps
-    linked_set: list[str] = list(dict.fromkeys(list(extras.pop("linked", []) if extras else []) + related))
+    linked_set: list[str] = list(dict.fromkeys(list(extras.pop("linked", []) if extras else []) + related_names))
 
     fields = dict(fields)  # don't mutate caller's dict
     fields["related_md"] = _related_md(related)
@@ -185,11 +247,21 @@ def log_universal(
         except Exception as e:
             print(f"[writer] entity-index update failed (continuing): {e}", file=sys.stderr)
 
+    # Make the links symmetric in the markdown: add [[this note]] back into each
+    # related note's ## Related section. Threshold already applied, so these are
+    # genuine relations only. Idempotent; never re-ingests (the link is for the
+    # graph + human readers, not the vector index).
+    for dn in related_names:
+        try:
+            _add_reciprocal_link(dn, slug)
+        except Exception as e:
+            print(f"[writer] reciprocal link to {dn} failed (continuing): {e}", file=sys.stderr)
+
     # Kick off background enrichment (non-blocking).
     if enrich:
         try:
             from memory.enricher import enrich_async
-            enrich_async(str(filepath), kind=kind, title=title, related=related)
+            enrich_async(str(filepath), kind=kind, title=title, related=related_names)
         except Exception:
             pass  # enrichment is optional — never break the write path
 
