@@ -14,7 +14,7 @@ First time wiring Memcon into Claude Desktop, vault writes failed with `[Errno 3
 Claude Desktop spawns the MCP subprocess with cwd=/, so the yaml's relative `vault.path: ./vault` resolved to `/vault` (root fs, read-only).
 
 ## Fix Applied
-`config.py` now absolutises `vault.path` against the directory holding `memcon.config.yaml` at config-load time, so every caller gets `/Users/barq/BARQ/engram/vault` regardless of cwd.
+`config.py` now absolutises `vault.path` against the directory holding `memcon.config.yaml` at config-load time, so every caller gets the real vault path (e.g. `/Users/you/memcon/vault`) regardless of cwd.
 
 ## Status
 fixed

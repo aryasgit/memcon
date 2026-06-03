@@ -11,14 +11,26 @@ if ! command -v docker &> /dev/null; then
   echo "❌ Docker not found. Install from https://docker.com"
   exit 1
 fi
-echo "✅ Docker found"
-
-# ── CHECK PYTHON ─────────────────────────
-if ! command -v python3 &> /dev/null; then
-  echo "❌ Python 3 not found."
+# Installed is not enough — the daemon must be RUNNING, or `docker compose up`
+# fails later (after we've already built the venv + pulled a multi-GB model).
+if ! docker info &> /dev/null; then
+  echo "❌ Docker is installed but not running."
+  echo "   → Start Docker Desktop (or 'sudo systemctl start docker'), then re-run."
   exit 1
 fi
-echo "✅ Python 3 found"
+echo "✅ Docker found and running"
+
+# ── CHECK PYTHON (3.10+) ──────────────────
+if ! command -v python3 &> /dev/null; then
+  echo "❌ Python 3 not found. Install Python 3.10+ from https://python.org"
+  exit 1
+fi
+if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+  PYVER=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))' 2>/dev/null || echo "unknown")
+  echo "❌ Python 3.10+ required (found ${PYVER}). Upgrade Python and re-run."
+  exit 1
+fi
+echo "✅ Python $(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))') found"
 
 # ── CHECK OLLAMA ──────────────────────────
 if ! command -v ollama &> /dev/null; then
@@ -109,8 +121,10 @@ docker compose up -d
 sleep 3
 
 # ── VAULT STRUCTURE ───────────────────────
+# Folders match the v3.1 note kinds (templates.FOLDER_FOR). The writer also
+# creates these on demand, so this is just a friendly starting layout.
 echo "📁 Setting up vault..."
-mkdir -p vault/{_templates,hardware,debugging,experiments,firmware,telemetry,decisions,gait}
+mkdir -p vault/{_templates,debugging,decisions,experiments,concepts,references,meetings,breakthroughs,sessions}
 
 # ── ENV FILE ─────────────────────────────
 if [ ! -f .env ]; then

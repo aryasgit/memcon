@@ -48,28 +48,41 @@ def _get_llm():
 
 
 def _ask_json(prompt: str, *, max_tokens: int | None = None, temperature: float = 0.1) -> dict:
-    """Run one LLM call in JSON mode and return the parsed dict.
+    """Run one LLM call and return the parsed JSON dict.
 
-    On any failure (transport error, malformed JSON, etc.) returns {} so the
-    caller can fall back gracefully — the extractor should never raise into
-    a write path.
+    Tries JSON mode first (most reliable on models that support it — qwen2.5-coder,
+    llama3.x). If that errors (older Ollama, a model without JSON-mode support,
+    or any transport hiccup) OR returns unparseable output, it retries WITHOUT
+    `response_format`, relying on _safe_json()'s brace-extraction to recover a
+    JSON object from a plain completion.
+
+    On total failure returns {} so the caller can fall back gracefully — the
+    extractor must never raise into a write path.
     """
-    try:
-        llm = _get_llm()
-        resp = llm.chat.completions.create(
-            model=cfg('llm', 'model'),
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens or cfg('llm', 'max_tokens'),
-            temperature=temperature,
-            # Ollama supports response_format via OpenAI-compat layer when the
-            # model supports JSON mode. Both qwen2.5-coder and llama3.x do.
-            response_format={"type": "json_object"},
-        )
-        raw = resp.choices[0].message.content
-    except Exception as e:
-        print(f"[extractor] LLM call failed: {e}", file=sys.stderr)
-        return {}
-    return _safe_json(raw)
+    mt = max_tokens or cfg('llm', 'max_tokens')
+    model = cfg('llm', 'model')
+
+    for use_json_mode in (True, False):
+        try:
+            llm = _get_llm()
+            kwargs = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": mt,
+                "temperature": temperature,
+            }
+            if use_json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
+            resp = llm.chat.completions.create(**kwargs)
+            parsed = _safe_json(resp.choices[0].message.content)
+            if parsed:
+                return parsed
+            # Empty parse in JSON mode → fall through and retry in plain mode.
+        except Exception as e:
+            mode = "json" if use_json_mode else "plain"
+            print(f"[extractor] LLM call failed (mode={mode}): {e}", file=sys.stderr)
+            continue
+    return {}
 
 
 def _safe_json(raw: str) -> dict:

@@ -11,3 +11,18 @@ tmp/
 # Obsidian workspace state — personal, don't commit
 vault/.obsidian/
 vault/Untitled.*
+vault/*.canvas
+vault/*.base
+
+# Private project docs — never ship these to the public repo.
+# (strategy, monetization, internal robot architecture, personal planning)
+vault/decisions/ENGRAM_TRANSFORMATION_ROADMAP.md
+vault/BARQ_HIVE_REFERENCE.md
+vault/**/*PRIVATE*
+vault/**/*STRATEGY*
+
+# Entity index DB (v3.1) — regenerated locally, never commit
+vault/.memcon/
+
+# Migration backups
+vault/_backup_v3.1*/
