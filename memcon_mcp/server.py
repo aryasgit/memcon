@@ -38,16 +38,57 @@ from memory.templates import ALL_KINDS
 
 mcp = FastMCP("memcon")
 
+# Load .env from the REPO dir explicitly. Claude Desktop spawns this server with
+# cwd=/ (the MCP registration has no cwd), so a bare load_dotenv() finds nothing;
+# an explicit path makes LLM_API_KEY / overrides load regardless of cwd.
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+import time as _time
+
+_llm_client = None
+
+
+def _get_llm():
+    """Shared OpenAI-compatible (Ollama) client built once, WITH A HARD TIMEOUT.
+    The timeout means a hung or cold-loading model can't block an memcon_ask /
+    memcon_digest call forever — it errors out and the tool degrades to returning
+    the raw memory chunks instead of freezing the stdio connection."""
+    global _llm_client
+    if _llm_client is None:
+        from openai import OpenAI
+        try:
+            t = float(cfg('llm', 'timeout'))
+        except Exception:
+            t = 90.0
+        _llm_client = OpenAI(
+            base_url=cfg('llm', 'base_url'),
+            api_key=os.getenv("LLM_API_KEY", "ollama"),
+            timeout=t,
+        )
+    return _llm_client
+
+
+_last_autosync = [0.0]
+_AUTOSYNC_THROTTLE_S = 3.0
+
 
 def _autosync() -> None:
-    """Reconcile the search index with the vault files before a read, so search
-    ALWAYS reflects what's on disk — automatically, with zero manual steps. A
-    note saved while Qdrant was down becomes findable on the next recall; an
-    Obsidian edit is picked up; a deleted note is pruned. Cheap (incremental
-    mtime check) and best-effort (never breaks a read)."""
+    """Trigger an index reconcile in the BACKGROUND — never on the read path.
+
+    The old version ran a full vault reconcile synchronously before every read,
+    so the first read after a bulk write became a re-ingest storm that froze the
+    client. Now the read returns immediately and the bounded worker brings the
+    index current within a moment (the debounced watcher + startup reindex are
+    the other convergence paths). Throttled so rapid reads don't pile up syncs."""
+    now = _time.monotonic()
+    if now - _last_autosync[0] < _AUTOSYNC_THROTTLE_S:
+        return
+    _last_autosync[0] = now
     try:
+        from memory.worker import submit
         from ingestion.ingest import sync_index
-        sync_index()
+        submit(sync_index)
     except Exception:
         pass
 
@@ -87,10 +128,6 @@ def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
 
     Returns: { "answer", "sources", "chunks_used", "raw_chunks" }
     """
-    from openai import OpenAI
-    from dotenv import load_dotenv
-    load_dotenv()
-
     _autosync()
     ensure_collection()
     results = _query(question, top_k=top_k, subsystem=subsystem)
@@ -98,10 +135,6 @@ def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
         return {"answer": "No relevant memory found.", "sources": [],
                 "chunks_used": 0, "raw_chunks": []}
 
-    llm = OpenAI(
-        base_url=cfg('llm', 'base_url'),
-        api_key=os.getenv("LLM_API_KEY", "ollama"),
-    )
     context = "\n\n---\n\n".join(
         f"[{r['memory_type']} | {r['subsystem']} | score={r['score']}]\n{r['text']}"
         for r in results
@@ -112,14 +145,22 @@ def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
         "If the context doesn't answer the question, say so explicitly.\n\n"
         f"CONTEXT:\n{context}\n\nQUESTION: {question}\n\nANSWER:"
     )
-    resp = llm.chat.completions.create(
-        model=cfg('llm', 'model'),
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=cfg('llm', 'max_tokens'),
-    )
+    sources = sorted({r["doc_name"] for r in results})
+    try:
+        resp = _get_llm().chat.completions.create(
+            model=cfg('llm', 'model'),
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=cfg('llm', 'max_tokens'),
+        )
+        answer = resp.choices[0].message.content
+    except Exception as e:
+        # LLM down/timed out — still return the grounding chunks rather than
+        # hanging the stdio path or erroring the whole tool call.
+        answer = (f"(Local LLM unavailable: {e}. The relevant memory chunks are "
+                  f"returned below for you to reason over.)")
     return {
-        "answer": resp.choices[0].message.content,
-        "sources": sorted({r["doc_name"] for r in results}),
+        "answer": answer,
+        "sources": sources,
         "chunks_used": len(results),
         "raw_chunks": results,
     }
@@ -371,9 +412,6 @@ def memcon_digest(since_days: int = 7) -> dict:
     """
     from pathlib import Path
     from datetime import datetime, timedelta, timezone
-    from openai import OpenAI
-    from dotenv import load_dotenv
-    load_dotenv()
 
     vault = Path(cfg('vault', 'path'))
     skip = set(cfg('vault', 'skip_dirs') or [])
@@ -410,10 +448,6 @@ def memcon_digest(since_days: int = 7) -> dict:
         f"## {folder}/{name}\n{text}" for name, folder, _, text in recent
     )
 
-    llm = OpenAI(
-        base_url=cfg('llm', 'base_url'),
-        api_key=os.getenv("LLM_API_KEY", "ollama"),
-    )
     prompt = (
         f"You are summarising an engineer's last {since_days} days of project memory.\n"
         f"Read the notes below (each is a debug session, decision, experiment, or session summary)\n"
@@ -426,13 +460,18 @@ def memcon_digest(since_days: int = 7) -> dict:
         f"NOTES:\n{bundle}\n\n"
         "DIGEST:"
     )
-    resp = llm.chat.completions.create(
-        model=cfg('llm', 'model'),
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=cfg('llm', 'max_tokens'),
-    )
+    try:
+        resp = _get_llm().chat.completions.create(
+            model=cfg('llm', 'model'),
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=cfg('llm', 'max_tokens'),
+        )
+        summary = resp.choices[0].message.content
+    except Exception as e:
+        summary = (f"(Local LLM unavailable: {e}.) {len(recent)} notes were touched "
+                   f"in the last {since_days} days.")
     return {
-        "summary": resp.choices[0].message.content,
+        "summary": summary,
         "notes_considered": len(recent),
         "since_days": since_days,
     }
@@ -597,7 +636,15 @@ def memcon_reindex() -> dict:
 
     Returns: { status, files, chunks }
     """
+    # Run the full rebuild on the background worker so the stdio call returns
+    # immediately instead of blocking on a whole-vault re-embed. Watch the chunk
+    # count climb via memcon_stats as it completes.
+    from memory.worker import submit
     from ingestion.ingest import reindex_vault
+    if submit(reindex_vault):
+        return {"status": "reindex started in background",
+                "note": "Re-ingesting every note off-thread; call memcon_stats to watch progress."}
+    # Worker saturated — fall back to synchronous so the request still completes.
     return {"status": "reindexed", **reindex_vault()}
 
 

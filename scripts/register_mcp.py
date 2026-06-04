@@ -106,6 +106,10 @@ def main() -> int:
     mcp_servers["memcon"] = {
         "command": str(py),
         "args": [str(server)],
+        # Spawn the server IN the repo dir. Without this, Claude Desktop launches
+        # it with cwd=/, so a bare load_dotenv() and any relative path resolve
+        # against / instead of the project.
+        "cwd": str(Path(str(server)).parent.parent),
     }
 
     cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")

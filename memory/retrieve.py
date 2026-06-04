@@ -75,8 +75,15 @@ def query(text: str, top_k: int = 5, subsystem: str | None = None) -> list[dict]
     # Over-fetch so we have headroom for reranking. Cap at 25.
     fetch_k = min(max(top_k * 3, 8), 25)
 
-    # 1) Semantic hits — full payload (text, subsystem, etc.)
-    sem_hits = query_semantic(text, top_k=fetch_k, subsystem=subsystem)
+    # 1) Semantic hits — full payload (text, subsystem, etc.). Degrade to
+    #    entity-only if Qdrant is down/slow: a read must never crash or hang the
+    #    caller just because the vector store is unavailable — the entity index
+    #    alone still answers exact-string queries.
+    try:
+        sem_hits = query_semantic(text, top_k=fetch_k, subsystem=subsystem)
+    except Exception as e:
+        print(f"[retrieve] semantic search unavailable, entity-only: {e}", file=sys.stderr)
+        sem_hits = []
     sem_by_doc: dict[str, dict] = {}
     for h in sem_hits:
         doc = h.get("doc_name")

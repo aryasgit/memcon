@@ -1,0 +1,4 @@
+# Dev / test dependencies (not required to run memcon).
+#   pip install -r requirements-dev.txt
+#   python -m pytest tests/
+pytest>=8

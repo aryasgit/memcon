@@ -34,6 +34,8 @@ from typing import Iterable
 
 from config import cfg
 from ingestion.ingest import ingest_file
+from memory.fsutil import atomic_write_text, note_lock
+from memory.worker import submit as bg_submit
 from memory.templates import (
     ALL_KINDS, FOLDER_FOR, SECTIONS_FOR, _slug,
     make_frontmatter, render_body, render_frontmatter, render,
@@ -118,24 +120,28 @@ def _add_reciprocal_link(target_doc: str, source_slug: str) -> None:
     path = _resolve_note_path(target_doc)
     if not path:
         return
-    try:
-        text = path.read_text()
-    except OSError:
-        return
     link = f"[[{source_slug}]]"
-    if link in text:
-        return  # already linked — idempotent
-    import re as _re
-    m = _re.search(r"^##\s+Related\s*$", text, _re.MULTILINE)
-    if m:
-        insert_at = m.end()  # just after the "## Related" line, before its newline
-        new_text = text[:insert_at] + f"\n- {link}" + text[insert_at:]
-    else:
-        new_text = text.rstrip() + f"\n\n## Related\n- {link}\n"
-    try:
-        path.write_text(new_text)
-    except OSError:
-        return
+    # Read-modify-write under a per-note lock + atomic replace, so two writers
+    # (across the two MCP clients) editing the same popular related note can't
+    # lost-update or truncate it.
+    with note_lock(path):
+        try:
+            text = path.read_text()
+        except OSError:
+            return
+        if link in text:
+            return  # already linked — idempotent (re-checked under the lock)
+        import re as _re
+        m = _re.search(r"^##\s+Related\s*$", text, _re.MULTILINE)
+        if m:
+            insert_at = m.end()  # just after the "## Related" line, before its newline
+            new_text = text[:insert_at] + f"\n- {link}" + text[insert_at:]
+        else:
+            new_text = text.rstrip() + f"\n\n## Related\n- {link}\n"
+        try:
+            atomic_write_text(path, new_text)
+        except OSError:
+            return
 
 
 def _project_name() -> str:
@@ -143,6 +149,39 @@ def _project_name() -> str:
         return cfg('project', 'name')
     except Exception:
         return ""
+
+
+def _finalize_note(filepath, doc_name, entities, related_names, kind, title, sections, enrich):
+    """The heavy tail of a write — run on the bounded background worker, OFF the
+    MCP stdio thread. Order matters: enrichment patches the note body, so we
+    ingest LAST so the final enriched content is what lands in Qdrant — and
+    because ingest_file is manifest-aware, that's exactly one embed per note."""
+    # 1) entity index (exact-match recall side of hybrid retrieval)
+    if entities:
+        try:
+            from memory.entity_index import index_note
+            index_note(doc_name=doc_name, entities=entities, path=filepath)
+        except Exception as e:
+            print(f"[writer] entity-index update failed (continuing): {e}", file=sys.stderr)
+    # 2) symmetric reciprocal links — each edits a related note under its own lock
+    for dn in related_names:
+        try:
+            _add_reciprocal_link(dn, doc_name)
+        except Exception as e:
+            print(f"[writer] reciprocal link to {dn} failed (continuing): {e}", file=sys.stderr)
+    # 3) enrichment (git context + see-also); patches THIS note and re-ingests it
+    if enrich:
+        try:
+            from memory.enricher import _enrich_safe
+            _enrich_safe(filepath, kind, title, list(related_names))
+        except Exception as e:
+            print(f"[writer] enrichment failed (continuing): {e}", file=sys.stderr)
+    # 4) ingest the FINAL content. If (3) ran it already ingested the enriched
+    #    note (this is a manifest-skip no-op); if not, this is its single ingest.
+    try:
+        ingest_file(filepath)
+    except Exception as e:
+        print(f"[writer] ingest failed (continuing): {e}", file=sys.stderr)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -190,7 +229,7 @@ def log_universal(
     # title + the first big body field as the query text so neighbours match
     # the *substance* of the note, not just its name.
     semantic_query_text = title + "\n" + _semantic_summary(kind, fields)
-    related = _find_related(semantic_query_text, exclude_doc=slug)  # [{doc_name, score}]
+    related = _find_related(semantic_query_text, exclude_doc=note_id)  # [{doc_name, score}]
     related_names = _doc_names(related)
 
     # Adaptive template (B2): grow the section list from the problem-specific
@@ -238,54 +277,42 @@ def log_universal(
     folder = FOLDER_FOR.get(kind, "debugging")
     target_dir = VAULT / folder
     target_dir.mkdir(parents=True, exist_ok=True)
-    filepath = target_dir / f"{slug}.md"
+    # Filename = the date-prefixed note_id (matches frontmatter `id`), NOT the
+    # bare title slug. Two genuinely different notes that slugify the same can no
+    # longer collide unless created the same day — in which case appending is the
+    # intended "recurrence" behaviour, not a silent merge of unrelated notes.
+    filepath = target_dir / f"{note_id}.md"
 
-    if filepath.exists() and not overwrite:
-        # Append-on-exists: preserve the original frontmatter, append a divider
-        # + an Update block with the new body sections. This way recurrence is
-        # naturally preserved. (overwrite=True is used by the async capture path
-        # to replace a provisional note with its fully-structured version.)
-        with open(filepath, 'a') as f:
-            f.write(
+    # ── Write the note ATOMICALLY (temp + fsync + os.replace) under a per-note
+    #    cross-process lock. A stall/crash mid-write can no longer truncate a
+    #    note, and the two MCP clients can't lost-update the same file. ─────────
+    with note_lock(filepath):
+        if filepath.exists() and not overwrite:
+            # Append-on-exists: preserve the original, append an Update block —
+            # built in memory and atomically replaced, never a partial in-place
+            # append that could corrupt an existing good note.
+            try:
+                existing = filepath.read_text()
+            except OSError:
+                existing = ""
+            addition = (
                 f"\n\n---\n*Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*\n\n"
                 + render_body(kind, title, fields, sections=sections)
             )
-    else:
-        with open(filepath, 'w') as f:
-            f.write(content)
+            atomic_write_text(filepath, existing.rstrip() + addition)
+        else:
+            atomic_write_text(filepath, content)
 
-    # Ingest into Qdrant immediately so semantic search picks it up.
-    try:
-        ingest_file(str(filepath))
-    except Exception as e:
-        print(f"[writer] ingest failed (continuing): {e}", file=sys.stderr)
-
-    # Update entity index (best-effort — module may not be present yet at boot).
-    if entities:
-        try:
-            from memory.entity_index import index_note
-            index_note(doc_name=slug, entities=entities, path=str(filepath))
-        except Exception as e:
-            print(f"[writer] entity-index update failed (continuing): {e}", file=sys.stderr)
-
-    # Make the links symmetric in the markdown: add [[this note]] back into each
-    # related note's ## Related section. Threshold already applied, so these are
-    # genuine relations only. Idempotent; never re-ingests (the link is for the
-    # graph + human readers, not the vector index).
-    for dn in related_names:
-        try:
-            _add_reciprocal_link(dn, slug)
-        except Exception as e:
-            print(f"[writer] reciprocal link to {dn} failed (continuing): {e}", file=sys.stderr)
-
-    # Kick off background enrichment (non-blocking).
-    if enrich:
-        try:
-            from memory.enricher import enrich_async
-            enrich_async(str(filepath), kind=kind, title=title, related=related_names)
-        except Exception:
-            pass  # enrichment is optional — never break the write path
-
+    # ── The heavy tail (ingest + entity index + reciprocal links + enrichment)
+    #    runs on the bounded background worker, OFF the MCP stdio thread, so the
+    #    tool call returns in ~the time of one file write instead of blocking on
+    #    the full embed/Qdrant/multi-file cascade that froze the client. The note
+    #    is already durably on disk; if the worker is saturated the
+    #    manifest/reconcile + watcher are the backstop that indexes it. ─────────
+    bg_submit(
+        _finalize_note,
+        str(filepath), note_id, entities, list(related_names), kind, title, sections, enrich,
+    )
     return str(filepath)
 
 

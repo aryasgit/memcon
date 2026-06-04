@@ -2,9 +2,15 @@
 cd "$(dirname "$0")"
 echo "Stopping memcon..."
 
-# Kill watcher
+# Kill watcher — but only if the PID is actually a watcher. PIDs get recycled, so
+# a stale .watcher.pid could otherwise kill an unrelated process.
 if [ -f .watcher.pid ]; then
-  kill $(cat .watcher.pid) 2>/dev/null && echo "✅ Watcher stopped"
+  WPID=$(cat .watcher.pid)
+  if kill -0 "$WPID" 2>/dev/null && ps -p "$WPID" -o command= 2>/dev/null | grep -q "watcher.py"; then
+    kill "$WPID" 2>/dev/null && echo "✅ Watcher stopped"
+  else
+    echo "ℹ️  .watcher.pid ($WPID) is stale or not a watcher — skipping kill"
+  fi
   rm -f .watcher.pid
 fi
 

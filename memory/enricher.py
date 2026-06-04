@@ -44,13 +44,11 @@ def enrich_async(
     Caller never sees errors — enrichment is opportunistic. The note is fully
     valid before enrichment runs, so partial failure is fine.
     """
-    t = threading.Thread(
-        target=_enrich_safe,
-        args=(filepath, kind, title, list(related or [])),
-        daemon=True,
-        name=f"memcon-enrich-{Path(filepath).stem}",
-    )
-    t.start()
+    # Route through the shared bounded worker pool instead of spawning a fresh
+    # daemon thread per write (the old per-write thread + up-to-4 git subprocesses
+    # was a primary source of the bulk-import thrash).
+    from memory.worker import submit
+    submit(_enrich_safe, filepath, kind, title, list(related or []))
 
 
 def _enrich_safe(filepath: str, kind: str, title: str, related: list[str]) -> None:
@@ -65,27 +63,39 @@ def _enrich_safe(filepath: str, kind: str, title: str, related: list[str]) -> No
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _enrich(filepath: str, *, kind: str, title: str, related: list[str]) -> None:
+    from memory.fsutil import atomic_write_text, note_lock
     path = Path(filepath)
     if not path.exists():
         return
 
-    raw = path.read_text()
-    fm, body = _split_frontmatter(raw)
+    # Read-modify-write under the per-note lock + atomic replace, re-reading the
+    # file under the lock so we never clobber a concurrent capture-overwrite or
+    # reciprocal-link edit (the lost-update race the audit flagged).
+    with note_lock(path):
+        try:
+            raw = path.read_text()
+        except OSError:
+            return
+        fm, body = _split_frontmatter(raw)
 
-    # ── Git block ───────────────────────────────────────────────────────────
-    git = _git_context()
-    if git:
-        fm = _patch_frontmatter(fm, "git", _yaml_inline_dict(git))
+        # ── Git block ───────────────────────────────────────────────────────
+        git = _git_context()
+        if git:
+            fm = _patch_frontmatter(fm, "git", _yaml_inline_dict(git))
 
-    # ── See also ────────────────────────────────────────────────────────────
-    see_also_body = _see_also_lines(related)
-    if see_also_body:
-        body = _ensure_section(body, "See also", see_also_body)
+        # ── See also ────────────────────────────────────────────────────────
+        see_also_body = _see_also_lines(related)
+        if see_also_body:
+            body = _ensure_section(body, "See also", see_also_body)
 
-    new_raw = (fm + "\n\n" + body).rstrip() + "\n"
-    if new_raw != raw:
-        path.write_text(new_raw)
-        # Re-ingest so the enriched chunks land in Qdrant too. Soft-fail.
+        new_raw = (fm + "\n\n" + body).rstrip() + "\n"
+        changed = new_raw != raw
+        if changed:
+            atomic_write_text(path, new_raw)
+
+    if changed:
+        # Re-ingest so the enriched chunks land in Qdrant too (outside the lock
+        # so we never hold it across an embed). Soft-fail.
         try:
             from ingestion.ingest import ingest_file
             ingest_file(str(path))

@@ -29,6 +29,7 @@ Public API:
 """
 from __future__ import annotations
 import os, sys, sqlite3, re
+from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Iterable
@@ -75,13 +76,36 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
+@contextmanager
+def _conn():
+    """Open a connection, COMMIT on success / ROLLBACK on error, and ALWAYS
+    close it.
+
+    `with sqlite3.connect(...) as c` does NOT close the connection — it only
+    ends the transaction. The old code relied on that idiom, so every lookup /
+    stats / index_note / clear_doc leaked a live connection and its WAL
+    read-mark. Leaked read-marks block WAL checkpoint/truncation (the -wal file
+    grows without bound) and eventually exhaust file descriptors, crashing the
+    process. This wrapper is the safe replacement used everywhere below.
+    """
+    conn = _connect()
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Write path
 # ──────────────────────────────────────────────────────────────────────────────
 
 def clear_doc(doc_name: str) -> int:
     """Remove every entity entry associated with a doc. Returns rows deleted."""
-    with _connect() as conn:
+    with _conn() as conn:
         cur = conn.execute("DELETE FROM entities WHERE doc_name = ?", (doc_name,))
         return cur.rowcount
 
@@ -111,7 +135,7 @@ def index_note(*, doc_name: str, entities: dict, path: str = "") -> int:
                 continue
             rows.append((v, v.lower(), kind, doc_name, path, now))
 
-    with _connect() as conn:
+    with _conn() as conn:
         conn.execute("DELETE FROM entities WHERE doc_name = ?", (doc_name,))
         conn.executemany(
             "INSERT OR REPLACE INTO entities "
@@ -211,7 +235,7 @@ def lookup(query: str, *, limit: int = 10) -> list[dict]:
     tokens_lc = [t.lower() for t in tokens]
 
     rows: list[tuple] = []
-    with _connect() as conn:
+    with _conn() as conn:
         # Exact (case-insensitive) hits
         cur = conn.execute(
             f"SELECT entity, kind, doc_name, path, entity_lc "
@@ -259,7 +283,7 @@ def lookup(query: str, *, limit: int = 10) -> list[dict]:
 
 def stats() -> dict:
     """Return aggregate counts. Useful for memcon_stats and health checks."""
-    with _connect() as conn:
+    with _conn() as conn:
         n_entities = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
         n_docs = conn.execute("SELECT COUNT(DISTINCT doc_name) FROM entities").fetchone()[0]
         by_kind = dict(conn.execute(

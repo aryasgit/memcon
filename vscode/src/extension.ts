@@ -38,22 +38,50 @@ function getRecentLimit(): number {
         .get<number>("recentLimit", 15);
 }
 
-async function memconFetch(path: string, init?: RequestInit): Promise<any> {
+const FETCH_TIMEOUT_MS = 15000;
+
+async function memconFetch(
+    path: string,
+    init?: RequestInit,
+    token?: vscode.CancellationToken
+): Promise<any> {
     const url = `${getApiUrl()}${path}`;
+    // Hard timeout: a slow/hung/overloaded API (the bulk-op incident) must never
+    // wedge the editor — abort after FETCH_TIMEOUT_MS. Also abort if the caller's
+    // CancellationToken fires (e.g. the user cancels the "thinking…" progress).
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
+    const sub = token?.onCancellationRequested(() => ctl.abort());
     let res: Response;
     try {
-        res = await fetch(url, init);
+        res = await fetch(url, { ...init, signal: ctl.signal });
     } catch (e: any) {
+        if (e?.name === "AbortError") {
+            throw new Error(
+                token?.isCancellationRequested
+                    ? "Memcon: cancelled."
+                    : `Memcon timed out after ${FETCH_TIMEOUT_MS / 1000}s — ${getApiUrl()} is slow or busy.`
+            );
+        }
         throw new Error(
             `Cannot reach Memcon at ${getApiUrl()}. Is it running? ` +
             `(Try: cd ~/memcon && ./start.sh — or run \`memcon serve\`)`
         );
+    } finally {
+        clearTimeout(timer);
+        sub?.dispose();
     }
     if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(`${res.status} ${res.statusText}: ${body.slice(0, 200)}`);
     }
-    return res.json();
+    try {
+        return await res.json();
+    } catch (e: any) {
+        throw new Error(
+            `Memcon returned a non-JSON response from ${url} — is "memcon.apiUrl" pointing at the API?`
+        );
+    }
 }
 
 function timeAgo(epoch: number): string {
@@ -91,15 +119,15 @@ async function ask(): Promise<void> {
         {
             location: vscode.ProgressLocation.Notification,
             title: "Memcon — thinking…",
-            cancellable: false,
+            cancellable: true,
         },
-        async () => {
+        async (_progress, token) => {
             try {
                 const d = await memconFetch("/ask", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ question: q, top_k: getTopK() }),
-                });
+                }, token);
                 const sources = (d.sources || []).join(", ") || "—";
                 const content = [
                     `# ${q}`,
@@ -234,6 +262,11 @@ class RecentProvider implements vscode.TreeDataProvider<RecentItem> {
         RecentItem | undefined
     >();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+    private _inFlight = false;
+
+    get inFlight(): boolean {
+        return this._inFlight;
+    }
 
     refresh(): void {
         this._onDidChangeTreeData.fire(undefined);
@@ -244,6 +277,7 @@ class RecentProvider implements vscode.TreeDataProvider<RecentItem> {
     }
 
     async getChildren(): Promise<RecentItem[]> {
+        this._inFlight = true;
         try {
             const d = await memconFetch(
                 `/memory/recent?limit=${getRecentLimit()}`
@@ -257,6 +291,8 @@ class RecentProvider implements vscode.TreeDataProvider<RecentItem> {
             return [
                 RecentItem.placeholder(`(api offline — ${getApiUrl()})`),
             ];
+        } finally {
+            this._inFlight = false;
         }
     }
 }
@@ -301,13 +337,19 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.registerTreeDataProvider("memconRecent", recent)
     );
 
-    // Refresh the sidebar every couple of minutes so it doesn't go stale
-    const tick = setInterval(() => recent.refresh(), 120_000);
+    // Refresh the sidebar every couple of minutes so it doesn't go stale. Skip a
+    // tick if a previous refresh is still in flight, so a slow API can't stack up
+    // overlapping requests (the timeout in memconFetch bounds each one).
+    const tick = setInterval(() => {
+        if (!recent.inFlight) recent.refresh();
+    }, 120_000);
     context.subscriptions.push({ dispose: () => clearInterval(tick) });
 
-    // Friendly first-launch hint
+    // Friendly first-launch hint. Persist "seen" UNCONDITIONALLY up front so the
+    // toast can't reappear every launch if the user dismisses it without clicking.
     const seen = context.globalState.get<boolean>("memcon.seenWelcome", false);
     if (!seen) {
+        context.globalState.update("memcon.seenWelcome", true);
         vscode.window
             .showInformationMessage(
                 "Memcon ready. Press Cmd+Shift+M (Ctrl+Shift+M on Linux/Windows) to ask.",
@@ -316,7 +358,6 @@ export function activate(context: vscode.ExtensionContext): void {
             )
             .then((choice) => {
                 if (choice === "Open dashboard") openDashboard();
-                context.globalState.update("memcon.seenWelcome", true);
             });
     }
 }

@@ -186,6 +186,7 @@ def capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     kind = _heuristic_kind(text, hint)
     title = _first_line_title(text)
     slug = _slug(title)
+    note_id = f"{datetime.now().strftime('%Y-%m-%d')}_{slug}"
 
     # Provisional note — written DIRECTLY to disk: no Qdrant query, no embedder,
     # no ingest, NO LLM. The synchronous path is just an instant heuristic
@@ -195,23 +196,27 @@ def capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
         kind=kind,
         title=title,
         fields={"tldr": title, "context_raw": text[:16000]},
-        note_id=f"{datetime.now().strftime('%Y-%m-%d')}_{slug}",
+        note_id=note_id,
         subsystem="unknown",
     )
     vault = Path(cfg('vault', 'path'))
     target = vault / FOLDER_FOR.get(kind, "debugging")
     target.mkdir(parents=True, exist_ok=True)
-    path = str(target / f"{slug}.md")
-    Path(path).write_text(content)
+    # Filename = date-prefixed note_id (matches the frontmatter id and the
+    # background structuring pass, which recomputes the same id → overwrites this
+    # exact file rather than orphaning it).
+    path = str(target / f"{note_id}.md")
+    from memory.fsutil import atomic_write_text, note_lock
+    with note_lock(path):
+        atomic_write_text(path, content)
 
     # Background: full multi-pass extraction → log_universal(overwrite=True),
     # which does related-links + adaptive template + entities + ingest + enrich.
-    threading.Thread(
-        target=_enrich_in_background,
-        args=(path, text, kind, title, run_critique),
-        daemon=True,
-        name=f"memcon-capture-{Path(path).stem}",
-    ).start()
+    # Routed through the SHARED bounded worker pool (not a fresh thread per
+    # capture) so a burst of captures can't fan out into dozens of concurrent
+    # LLM passes + embeds and thrash the machine.
+    from memory.worker import submit
+    submit(_enrich_in_background, path, text, kind, title, run_critique)
 
     return {
         "status": "saved",

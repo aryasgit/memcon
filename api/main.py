@@ -19,9 +19,15 @@ VAULT_ROOT = Path(cfg('vault', 'path')).resolve()
 SKIP_DIRS = set(cfg('vault', 'skip_dirs') or [])
 
 app = FastAPI(title="Memcon API")
+try:
+    _LLM_TIMEOUT = float(cfg('llm', 'timeout'))
+except Exception:
+    _LLM_TIMEOUT = 90.0
+# Hard timeout so a hung/cold Ollama can't pin a worker thread forever on /ask.
 llm = OpenAI(
     base_url=cfg('llm','base_url'),
-    api_key=os.getenv("LLM_API_KEY", "ollama")
+    api_key=os.getenv("LLM_API_KEY", "ollama"),
+    timeout=_LLM_TIMEOUT,
 )
 
 # ── REQUEST GUARD: body-size limit + tiered rate limiting ──────────────────
@@ -138,6 +144,16 @@ def _vault_safe(path_str: str) -> Path:
 @app.on_event("startup")
 def startup():
     ensure_collection()
+    # Pre-warm the embedding model in the BACKGROUND so the first /query or /ask
+    # doesn't pay the one-time model-load latency inside a request (and the model
+    # loads exactly once). Never blocks startup.
+    def _warm():
+        try:
+            from ingestion.embedder import get_model
+            get_model()
+        except Exception:
+            pass
+    threading.Thread(target=_warm, daemon=True, name="memcon-api-warm").start()
 
 # ── REQUEST MODELS ────────────────────────────────────────
 # Every string field is length-bounded and every numeric field range-bounded, so
@@ -243,13 +259,19 @@ CONTEXT:
 QUESTION: {req.question}
 
 ANSWER:"""
-    response = llm.chat.completions.create(
-        model=cfg('llm','model'),
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=cfg('llm','max_tokens'),
-    )
+    try:
+        response = llm.chat.completions.create(
+            model=cfg('llm','model'),
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=cfg('llm','max_tokens'),
+        )
+        answer = response.choices[0].message.content
+    except Exception as e:
+        # LLM down/timed out — still return the grounding chunks instead of 500.
+        answer = (f"(Local LLM unavailable: {e}. The relevant memory chunks are "
+                  f"returned below.)")
     return {
-        "answer": response.choices[0].message.content,
+        "answer": answer,
         "sources": list(set(r["doc_name"] for r in results)),
         "chunks_used": len(results),
         "raw_chunks": results,

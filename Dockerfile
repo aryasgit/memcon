@@ -18,6 +18,11 @@ COPY . /app
 ENV PYTHONPATH=/app
 EXPOSE 8000
 
+# Liveness: the API must answer /health, else the orchestrator can restart it
+# (paired with `restart: unless-stopped` in the compose files).
+HEALTHCHECK --interval=15s --timeout=3s --start-period=40s --retries=5 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+
 # Default: API + vault watcher.
 # Watcher writes to vault/ which is bind-mounted; API serves on 8000.
 # 0.0.0.0 is correct INSIDE the container; control exposure at run time with a

@@ -37,8 +37,19 @@ def get_config() -> dict:
     global _config
     if _config is None:
         config_path = Path(__file__).parent / "memcon.config.yaml"
-        with open(config_path) as f:
-            _config = yaml.safe_load(f)
+        try:
+            with open(config_path) as f:
+                # `or {}` guards the empty-file case: yaml.safe_load returns None
+                # for an empty file, which would leave the `is None` cache sentinel
+                # tripping every call and crash the setdefault()s below.
+                _config = yaml.safe_load(f) or {}
+        except FileNotFoundError:
+            raise RuntimeError(
+                f"memcon.config.yaml not found at {config_path}. Copy it from the "
+                f"repo (or re-run install.sh) before starting memcon."
+            ) from None
+        except yaml.YAMLError as e:
+            raise RuntimeError(f"memcon.config.yaml is malformed YAML: {e}") from None
 
         # ── per-machine override (gitignored): keeps the tracked config clean
         #    while letting each machine point at its own (e.g. synced) vault.

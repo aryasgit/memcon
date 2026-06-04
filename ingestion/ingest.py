@@ -1,4 +1,4 @@
-import sys, os, re, json, threading
+import sys, os, re, json, threading, tempfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from pathlib import Path
 from ingestion.chunker import chunk_file
@@ -32,9 +32,22 @@ def _is_excluded(filepath: str) -> bool:
     return any(part in skip for part in Path(filepath).parts)
 
 
-def ingest_file(filepath: str) -> int:
+def ingest_file(filepath: str, force: bool = False) -> int:
     if _is_excluded(filepath):
         print(f"[ingest] skipped (private/excluded): {filepath}", file=sys.stderr)
+        return 0
+    # Manifest-aware skip: if this exact file is already indexed at its current
+    # mtime, do nothing. This makes ingest_file IDEMPOTENT, which is what breaks
+    # the write-amplification loop — the writer's own ingest, the watcher
+    # re-firing on that same write, the enricher's re-save, and reciprocal-link
+    # edits all used to each trigger a full embed+Qdrant cycle (~4-7× per note).
+    # Now only a genuine content change (new mtime) costs an embed.
+    try:
+        mtime = os.path.getmtime(filepath)
+        stem = Path(filepath).stem
+    except OSError:
+        return 0
+    if not force and _manifest_read().get(stem) == mtime:
         return 0
     ensure_collection()
     chunks = chunk_file(filepath)
@@ -50,6 +63,7 @@ def ingest_file(filepath: str) -> int:
     if doc:
         delete_by_doc(doc)
     n = upsert_chunks(chunks, vectors)
+    _manifest_touch(stem, mtime)
     print(f"[ingest] {filepath} → {n} chunks added", file=sys.stderr)
     return n
 
@@ -74,7 +88,7 @@ def reindex_vault() -> dict:
         if any(part.startswith('_backup') or part == '.memcon' for part in rel.parts):
             continue
         try:
-            added = ingest_file(str(p))   # ingest_file applies private/skip filters
+            added = ingest_file(str(p), force=True)   # explicit rebuild: bypass mtime-skip
             if added:
                 nf += 1
                 nc += added
@@ -103,15 +117,61 @@ def _sync_lock_path() -> Path:
     return Path(cfg('vault', 'path')) / '.memcon' / 'sync.lock'
 
 
+# ── manifest persistence — atomic + serialized ───────────────────────────────
+_MANIFEST_LOCK = threading.Lock()   # serialize manifest read-modify-write in-process
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Write text durably and atomically: temp file in the same dir, fsync, then
+    os.replace (atomic on POSIX). A crash or kill mid-write can never truncate
+    the destination — the old content survives until replace flips to the new.
+    Used for the manifest (and reused by the note writers)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, str(path))
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _manifest_read() -> dict:
+    mpath = _manifest_path()
+    try:
+        return json.loads(mpath.read_text()) if mpath.exists() else {}
+    except Exception:
+        # Corrupt/partial manifest → treat as empty (a full reconcile rebuilds it).
+        return {}
+
+
+def _manifest_touch(stem: str, mtime: float) -> None:
+    """Record stem→mtime so any later ingest/sync of that unchanged file is a
+    cheap no-op. This is the cross-process signal that lets the watcher skip
+    re-ingesting memcon's own writes."""
+    with _MANIFEST_LOCK:
+        m = _manifest_read()
+        if m.get(stem) == mtime:
+            return
+        m[stem] = mtime
+        try:
+            _atomic_write_text(_manifest_path(), json.dumps(m))
+        except Exception:
+            pass
+
+
 def _reconcile() -> dict:
     """The mtime-manifest reconcile itself. Callers must already hold the sync
     locks (see sync_index)."""
     vault = Path(cfg('vault', 'path'))
     mpath = _manifest_path()
-    try:
-        manifest = json.loads(mpath.read_text()) if mpath.exists() else {}
-    except Exception:
-        manifest = {}
+    manifest = _manifest_read()
 
     current: dict = {}
     for p in vault.rglob("*.md"):
@@ -145,11 +205,11 @@ def _reconcile() -> dict:
             del manifest[doc]
             removed += 1
 
-    try:
-        mpath.parent.mkdir(parents=True, exist_ok=True)
-        mpath.write_text(json.dumps(manifest))
-    except Exception:
-        pass
+    with _MANIFEST_LOCK:
+        try:
+            _atomic_write_text(mpath, json.dumps(manifest))
+        except Exception:
+            pass
     return {"synced": synced, "removed": removed}
 
 
