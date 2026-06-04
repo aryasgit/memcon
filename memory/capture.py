@@ -180,13 +180,16 @@ def capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     from datetime import datetime
     from memory.templates import render, FOLDER_FOR, _slug
 
-    kind = _quick_classify(text, hint)
+    # Pick the kind with the INSTANT heuristic — NO LLM on the synchronous path,
+    # so the write returns in milliseconds even on a cold server. The background
+    # daemon still runs the full multi-pass extraction (structure + entities).
+    kind = _heuristic_kind(text, hint)
     title = _first_line_title(text)
     slug = _slug(title)
 
     # Provisional note — written DIRECTLY to disk: no Qdrant query, no embedder,
-    # no ingest. The synchronous path is just the bounded classify (<=12s) + a
-    # file write, so it returns well within the MCP timeout even on a cold
+    # no ingest, NO LLM. The synchronous path is just an instant heuristic
+    # classify + a file write, so it returns in milliseconds even on a cold
     # server. The raw text is preserved under ## Context.
     content = render(
         kind=kind,
