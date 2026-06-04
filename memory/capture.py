@@ -210,14 +210,21 @@ def capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     with note_lock(path):
         atomic_write_text(path, content)
 
-    # Background structuring needs a LOCAL LLM, which is OPTIONAL. Only enqueue it
-    # when one is reachable (routed through the shared bounded worker pool so a
-    # burst can't stampede). Without a local LLM, the instant raw note stands —
-    # already searchable — and the assistant can structure it via memcon_write_*.
+    # ALWAYS index the raw note immediately (on the bounded worker) so it is
+    # genuinely searchable right away — independent of any local LLM. (Regression
+    # fix: in Claude mode this used to never enqueue an ingest, so captured notes
+    # sat on disk INVISIBLE to recall until the next startup reindex.)
+    from memory.worker import submit
+    from ingestion.ingest import ingest_file
+    submit(ingest_file, path)
+
+    # Background structuring needs a LOCAL LLM, which is OPTIONAL. When one is
+    # present it restructures the note and re-indexes it; otherwise the raw note
+    # (already indexed above) stands and the assistant can add structure via
+    # memcon_write_*.
     from memory.llm import is_available
     llm_on = is_available()
     if llm_on:
-        from memory.worker import submit
         submit(_enrich_in_background, path, text, kind, title, run_critique)
         note = ("Saved instantly — raw text already searchable. A local LLM is "
                 "structuring it into sections + entities in the background; no need "

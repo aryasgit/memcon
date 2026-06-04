@@ -264,6 +264,35 @@ def test_llm_enabled_reflects_provider(monkeypatch):
     assert llm.enabled() is True       # local-LLM mode
 
 
+@requires_qdrant
+def test_capture_indexes_note_even_in_claude_mode(monkeypatch):
+    # Force Claude mode (no LLM) but DON'T mock the worker: the raw note must
+    # still get indexed and be searchable. Regression — it used to only index
+    # when a local LLM was present, so Claude-mode captures were invisible.
+    import memory.llm as llm
+    monkeypatch.setattr(llm, "is_available", lambda *a, **k: False)
+    from memory.capture import capture
+    from memory import worker
+    from memory.retrieve import query
+    from memory.qdrant_store import delete_by_doc
+    from memory.entity_index import clear_doc
+    import ingestion.ingest as ing
+    res = capture("Claude-mode indexing regression: erased the internal disk and reinstalled the operating system from recovery mode.", hint="session")
+    p = res["path"]; stem = Path(p).stem
+    try:
+        assert res["structured"] is False
+        worker._q.join(); time.sleep(0.5)
+        hits = query("erased the disk and reinstalled the OS from recovery", top_k=5)
+        assert any(h.get("doc_name") == stem for h in hits), \
+            f"capture note NOT indexed in Claude mode: {[h.get('doc_name') for h in hits]}"
+    finally:
+        if os.path.exists(p):
+            os.remove(p)
+        delete_by_doc(stem); clear_doc(stem)
+        m = ing._manifest_read(); m.pop(stem, None)
+        ing._atomic_write_text(ing._manifest_path(), json.dumps(m))
+
+
 def test_capture_lean_keeps_raw_note_without_llm(monkeypatch):
     import memory.llm as llm
     monkeypatch.setattr(llm, "is_available", lambda *a, **k: False)
