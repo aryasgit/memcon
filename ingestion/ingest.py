@@ -1,4 +1,4 @@
-import sys, os, re
+import sys, os, re, json, threading
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from pathlib import Path
 from ingestion.chunker import chunk_file
@@ -81,3 +81,77 @@ def reindex_vault() -> dict:
         except Exception as e:
             print(f"[reindex] {p}: {e}", file=sys.stderr)
     return {"files": nf, "chunks": nc}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Incremental auto-sync — the FULLY AUTOMATIC index reconciliation
+# ──────────────────────────────────────────────────────────────────────────────
+
+_SYNC_LOCK = threading.Lock()
+
+
+def _manifest_path() -> Path:
+    return Path(cfg('vault', 'path')) / '.memcon' / 'index_manifest.json'
+
+
+def sync_index() -> dict:
+    """Reconcile the search index with the vault files INCREMENTALLY, using an
+    mtime manifest. Reingest only notes that are new or changed since the last
+    sync; drop chunks for notes deleted from disk. Cheap when nothing changed
+    (just a stat scan) — so it's safe to call before EVERY read.
+
+    This is what makes search always reflect what's on disk, with zero manual
+    steps and no restart: a note saved while Qdrant was down becomes findable on
+    the very next recall; an Obsidian edit is picked up automatically; a deleted
+    note's chunks are pruned automatically.
+
+    Returns {synced, removed}.
+    """
+    if cfg is None:
+        return {"synced": 0, "removed": 0}
+    with _SYNC_LOCK:
+        vault = Path(cfg('vault', 'path'))
+        mpath = _manifest_path()
+        try:
+            manifest = json.loads(mpath.read_text()) if mpath.exists() else {}
+        except Exception:
+            manifest = {}
+
+        current: dict = {}
+        for p in vault.rglob("*.md"):
+            try:
+                rel = p.relative_to(vault)
+            except ValueError:
+                continue
+            if any(part.startswith('_backup') or part == '.memcon' for part in rel.parts):
+                continue
+            if _is_excluded(str(p)):
+                continue
+            try:
+                current[p.stem] = (str(p), p.stat().st_mtime)
+            except OSError:
+                continue
+
+        synced = 0
+        for doc, (path, mtime) in current.items():
+            if manifest.get(doc) != mtime:            # new or modified since last sync
+                try:
+                    if ingest_file(path):             # clean-replace handles stale chunks
+                        manifest[doc] = mtime
+                        synced += 1
+                except Exception as e:
+                    print(f"[sync] {path}: {e}", file=sys.stderr)
+
+        removed = 0
+        for doc in list(manifest.keys()):
+            if doc not in current:                    # note deleted from disk → prune
+                delete_by_doc(doc)
+                del manifest[doc]
+                removed += 1
+
+        try:
+            mpath.parent.mkdir(parents=True, exist_ok=True)
+            mpath.write_text(json.dumps(manifest))
+        except Exception:
+            pass
+        return {"synced": synced, "removed": removed}

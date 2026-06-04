@@ -39,6 +39,19 @@ from memory.templates import ALL_KINDS
 mcp = FastMCP("memcon")
 
 
+def _autosync() -> None:
+    """Reconcile the search index with the vault files before a read, so search
+    ALWAYS reflects what's on disk — automatically, with zero manual steps. A
+    note saved while Qdrant was down becomes findable on the next recall; an
+    Obsidian edit is picked up; a deleted note is pruned. Cheap (incremental
+    mtime check) and best-effort (never breaks a read)."""
+    try:
+        from ingestion.ingest import sync_index
+        sync_index()
+    except Exception:
+        pass
+
+
 @mcp.tool()
 def memcon_query(query: str, top_k: int = 5, subsystem: str | None = None) -> dict:
     """
@@ -54,6 +67,7 @@ def memcon_query(query: str, top_k: int = 5, subsystem: str | None = None) -> di
 
     Returns: { "results": [ {score, text, doc_name, subsystem, memory_type, tags}, ... ] }
     """
+    _autosync()
     ensure_collection()
     results = _query(query, top_k=top_k, subsystem=subsystem)
     return {"results": results, "count": len(results)}
@@ -77,6 +91,7 @@ def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
     from dotenv import load_dotenv
     load_dotenv()
 
+    _autosync()
     ensure_collection()
     results = _query(question, top_k=top_k, subsystem=subsystem)
     if not results:
@@ -144,6 +159,7 @@ def memcon_recall(problem: str, k: int = 5) -> dict:
                           score, outcome, what_was_tried, excerpt}],
                count }
     """
+    _autosync()
     from memory.recall import recall as _recall
     return _recall(problem, k=k)
 
@@ -594,8 +610,8 @@ def main() -> None:
 
     def _bg_reindex():
         try:
-            from ingestion.ingest import reindex_vault
-            reindex_vault()
+            from ingestion.ingest import sync_index
+            sync_index()
         except Exception:
             pass
 
