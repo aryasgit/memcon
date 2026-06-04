@@ -66,10 +66,11 @@ if [ "${MEMCON_WITH_OLLAMA:-0}" = "1" ]; then
     echo "   RAM ${TOTAL_RAM_GB}GB → model: $SELECTED_MODEL"
     # Write the model into config (anchored so we never touch embedding_model).
     if [ -f "memcon.config.yaml" ]; then
+      # Flip provider to ollama (out of the default "none"/Claude mode) + set model.
       if [ "$OS" = "Darwin" ]; then
-        sed -i '' "s|^  model: \".*\"|  model: \"$SELECTED_MODEL\"|" memcon.config.yaml
+        sed -i '' -e "s|^  provider: \".*\"|  provider: \"ollama\"|" -e "s|^  model: \".*\"|  model: \"$SELECTED_MODEL\"|" memcon.config.yaml
       else
-        sed -i "s|^  model: \".*\"|  model: \"$SELECTED_MODEL\"|" memcon.config.yaml
+        sed -i -e "s|^  provider: \".*\"|  provider: \"ollama\"|" -e "s|^  model: \".*\"|  model: \"$SELECTED_MODEL\"|" memcon.config.yaml
       fi
     fi
   else

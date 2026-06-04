@@ -83,8 +83,8 @@ IF EXIST requirements.txt (
 
 REM ── WRITE MODEL INTO CONFIG (only with a local LLM) ─
 IF "%WITH_OLLAMA%"=="1" (
-  python -c "import re; p='memcon.config.yaml'; s=open(p).read(); s=re.sub(r'(?m)^  model: \".*\"', '  model: \"%MODEL%\"', s); open(p,'w').write(s)"
-  echo Config updated with model: %MODEL%
+  python -c "import re; p='memcon.config.yaml'; s=open(p).read(); s=re.sub(r'(?m)^  provider: \".*\"', '  provider: \"ollama\"', s); s=re.sub(r'(?m)^  model: \".*\"', '  model: \"%MODEL%\"', s); open(p,'w').write(s)"
+  echo Config updated: provider=ollama model=%MODEL%
 )
 
 REM ── PULL LLM (only with a local LLM) ─────

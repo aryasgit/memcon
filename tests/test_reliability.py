@@ -246,10 +246,20 @@ def test_mcp_autosync_is_nonblocking():
 
 
 # ── Lean / Ollama-optional ────────────────────────────────────────────────
-def test_llm_enabled_by_default():
+def test_llm_enabled_reflects_provider(monkeypatch):
     from memory import llm
-    # Default on, so a present Ollama auto-works; the probe handles 'not installed'.
-    assert llm.enabled() is True
+
+    def cfg_with(provider):
+        def f(*keys):
+            if keys == ('llm', 'provider'):
+                return provider
+            raise KeyError(keys)
+        return f
+
+    monkeypatch.setattr(llm, "cfg", cfg_with("none"))
+    assert llm.enabled() is False     # "none" = Claude mode (the shipped default)
+    monkeypatch.setattr(llm, "cfg", cfg_with("ollama"))
+    assert llm.enabled() is True       # local-LLM mode
 
 
 def test_capture_lean_keeps_raw_note_without_llm(monkeypatch):

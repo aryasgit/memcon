@@ -456,10 +456,10 @@ memory:
   embedding_model: "all-MiniLM-L6-v2"
   vector_dim: 384
 
-llm:                          # OPTIONAL — memcon works without a local LLM
-  provider: "ollama"          # "none" to force the lean (no-LLM) path
-  enabled: true               # auto-detected: present Ollama used, absent one degrades
-  model: "qwen2.5-coder:7b"   # only with Ollama (auto-set by MEMCON_WITH_OLLAMA install)
+llm:                          # OPTIONAL — Claude mode by default (no local LLM)
+  provider: "none"            # "none" = Claude mode · "ollama" = local LLM
+  enabled: true               # only consulted when provider is "ollama"
+  model: "qwen2.5-coder:7b"   # used only with Ollama (auto-set by MEMCON_WITH_OLLAMA install)
   base_url: "http://localhost:11434/v1"
   max_tokens: 1024
   timeout: 90

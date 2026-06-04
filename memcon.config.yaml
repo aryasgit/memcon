@@ -21,8 +21,8 @@ llm:
   # fully-offline auto-structuring / self-contained answers (opt in at install
   # time with MEMCON_WITH_OLLAMA=1). When no local LLM is reachable, capture
   # keeps the raw note and ask/digest return the chunks for you to use.
-  provider: "ollama"          # set to "none" to force the no-LLM (lean) path
-  enabled: true               # auto-detected: a present Ollama is used, an absent one degrades
+  provider: "none"            # "none" = Claude mode (default) · "ollama" = local LLM
+  enabled: true               # only consulted when provider is "ollama"
   model: "qwen2.5-coder:7b"
   base_url: "http://localhost:11434/v1"
   max_tokens: 1024
