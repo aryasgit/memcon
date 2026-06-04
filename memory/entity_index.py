@@ -51,8 +51,14 @@ def _db_path() -> Path:
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(_db_path()))
+    # Concurrency-safe by default: memcon often runs in TWO clients at once
+    # (Claude Desktop + Code) sharing this one DB. WAL lets readers and a writer
+    # coexist; busy_timeout makes a second writer WAIT up to 5s for the lock
+    # instead of failing instantly with "database is locked".
+    conn = sqlite3.connect(str(_db_path()), timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS entities (
             entity     TEXT NOT NULL,

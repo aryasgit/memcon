@@ -87,11 +87,70 @@ def reindex_vault() -> dict:
 # Incremental auto-sync — the FULLY AUTOMATIC index reconciliation
 # ──────────────────────────────────────────────────────────────────────────────
 
-_SYNC_LOCK = threading.Lock()
+_SYNC_LOCK = threading.Lock()          # serialize within this process
+
+try:
+    import portalocker                  # cross-process lock (already a dependency)
+except Exception:                       # degrade gracefully if unavailable
+    portalocker = None
 
 
 def _manifest_path() -> Path:
     return Path(cfg('vault', 'path')) / '.memcon' / 'index_manifest.json'
+
+
+def _sync_lock_path() -> Path:
+    return Path(cfg('vault', 'path')) / '.memcon' / 'sync.lock'
+
+
+def _reconcile() -> dict:
+    """The mtime-manifest reconcile itself. Callers must already hold the sync
+    locks (see sync_index)."""
+    vault = Path(cfg('vault', 'path'))
+    mpath = _manifest_path()
+    try:
+        manifest = json.loads(mpath.read_text()) if mpath.exists() else {}
+    except Exception:
+        manifest = {}
+
+    current: dict = {}
+    for p in vault.rglob("*.md"):
+        try:
+            rel = p.relative_to(vault)
+        except ValueError:
+            continue
+        if any(part.startswith('_backup') or part == '.memcon' for part in rel.parts):
+            continue
+        if _is_excluded(str(p)):
+            continue
+        try:
+            current[p.stem] = (str(p), p.stat().st_mtime)
+        except OSError:
+            continue
+
+    synced = 0
+    for doc, (path, mtime) in current.items():
+        if manifest.get(doc) != mtime:            # new or modified since last sync
+            try:
+                if ingest_file(path):             # clean-replace handles stale chunks
+                    manifest[doc] = mtime
+                    synced += 1
+            except Exception as e:
+                print(f"[sync] {path}: {e}", file=sys.stderr)
+
+    removed = 0
+    for doc in list(manifest.keys()):
+        if doc not in current:                    # note deleted from disk → prune
+            delete_by_doc(doc)
+            del manifest[doc]
+            removed += 1
+
+    try:
+        mpath.parent.mkdir(parents=True, exist_ok=True)
+        mpath.write_text(json.dumps(manifest))
+    except Exception:
+        pass
+    return {"synced": synced, "removed": removed}
 
 
 def sync_index() -> dict:
@@ -105,53 +164,33 @@ def sync_index() -> dict:
     the very next recall; an Obsidian edit is picked up automatically; a deleted
     note's chunks are pruned automatically.
 
-    Returns {synced, removed}.
+    Concurrency-safe: memcon often runs in two clients at once (Claude Desktop +
+    Code). A per-process lock plus a cross-process file lock ensure only ONE
+    instance reconciles at a time — if another is already syncing, this call
+    skips cleanly (the other brings the index current) rather than both
+    redundantly reingesting and contending on Qdrant + the entity DB.
+
+    Returns {synced, removed} (plus skipped="..." when another instance held it).
     """
     if cfg is None:
         return {"synced": 0, "removed": 0}
-    with _SYNC_LOCK:
-        vault = Path(cfg('vault', 'path'))
-        mpath = _manifest_path()
+    with _SYNC_LOCK:                                       # intra-process guard
+        if portalocker is None:
+            return _reconcile()
         try:
-            manifest = json.loads(mpath.read_text()) if mpath.exists() else {}
+            lp = _sync_lock_path()
+            lp.parent.mkdir(parents=True, exist_ok=True)
+            lock = portalocker.Lock(str(lp), timeout=0.1, fail_when_locked=True)
         except Exception:
-            manifest = {}
-
-        current: dict = {}
-        for p in vault.rglob("*.md"):
-            try:
-                rel = p.relative_to(vault)
-            except ValueError:
-                continue
-            if any(part.startswith('_backup') or part == '.memcon' for part in rel.parts):
-                continue
-            if _is_excluded(str(p)):
-                continue
-            try:
-                current[p.stem] = (str(p), p.stat().st_mtime)
-            except OSError:
-                continue
-
-        synced = 0
-        for doc, (path, mtime) in current.items():
-            if manifest.get(doc) != mtime:            # new or modified since last sync
-                try:
-                    if ingest_file(path):             # clean-replace handles stale chunks
-                        manifest[doc] = mtime
-                        synced += 1
-                except Exception as e:
-                    print(f"[sync] {path}: {e}", file=sys.stderr)
-
-        removed = 0
-        for doc in list(manifest.keys()):
-            if doc not in current:                    # note deleted from disk → prune
-                delete_by_doc(doc)
-                del manifest[doc]
-                removed += 1
-
+            return _reconcile()                           # lock setup failed → just sync
         try:
-            mpath.parent.mkdir(parents=True, exist_ok=True)
-            mpath.write_text(json.dumps(manifest))
+            lock.acquire()
         except Exception:
-            pass
-        return {"synced": synced, "removed": removed}
+            return {"synced": 0, "removed": 0, "skipped": "another instance syncing"}
+        try:
+            return _reconcile()
+        finally:
+            try:
+                lock.release()
+            except Exception:
+                pass
