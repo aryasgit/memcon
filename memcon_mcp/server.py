@@ -569,7 +569,37 @@ def memcon_write_breakthrough(
     return {"status": "written", "kind": "breakthrough", "path": path}
 
 
+@mcp.tool()
+def memcon_reindex() -> dict:
+    """Rebuild the search index from the vault files. Call this whenever
+    memcon_recall / memcon_query / memcon_ask come back EMPTY for content you
+    KNOW is written in a note — it means the search index drifted from the files
+    on disk (a note saved while Qdrant was down, a note edited directly in
+    Obsidian, or a once-empty note that got refilled). Re-ingests every note as
+    a clean replace so search matches exactly what's on disk. Fast for a normal
+    vault. After this, retry the recall — the content will be findable.
+
+    Returns: { status, files, chunks }
+    """
+    from ingestion.ingest import reindex_vault
+    return {"status": "reindexed", **reindex_vault()}
+
+
 def main() -> None:
+    # Self-heal: reconcile the search index with the vault files in the
+    # BACKGROUND on startup. A note written while Qdrant was down (or edited in
+    # Obsidian) becomes searchable shortly after Claude reconnects — without
+    # blocking the server from coming up. The index stops silently drifting.
+    import threading
+
+    def _bg_reindex():
+        try:
+            from ingestion.ingest import reindex_vault
+            reindex_vault()
+        except Exception:
+            pass
+
+    threading.Thread(target=_bg_reindex, daemon=True, name="memcon-startup-reindex").start()
     mcp.run()  # stdio transport by default
 
 

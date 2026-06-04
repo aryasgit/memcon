@@ -35,6 +35,21 @@ def upsert_chunks(chunks: list[dict], vectors: list[list[float]]) -> int:
     client.upsert(collection_name=COLLECTION, points=points)
     return len(points)
 
+def delete_by_doc(doc_name: str) -> None:
+    """Remove every point for a given doc_name. Used as a clean-replace before
+    re-ingesting a note, so editing or shrinking a note never leaves orphan
+    chunks (e.g. the title chunk of a once-empty note) lingering in the index."""
+    try:
+        client.delete(
+            collection_name=COLLECTION,
+            points_selector=Filter(must=[
+                FieldCondition(key="doc_name", match=MatchValue(value=doc_name))
+            ]),
+        )
+    except Exception as e:
+        print(f"[qdrant] delete_by_doc({doc_name}) failed: {e}", file=sys.stderr)
+
+
 def search(query_vec: list[float], top_k: int = 5, subsystem: str = None) -> list[dict]:
     query_filter = None
     if subsystem:
