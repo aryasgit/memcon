@@ -249,21 +249,22 @@ ENTITY_CATEGORIES = (
 def extract_entities(text: str) -> dict:
     """Pull structured entities out of arbitrary text. Returns a dict keyed by
     ENTITY_CATEGORIES, each value a list of distinct strings."""
-    cats = ", ".join(ENTITY_CATEGORIES)
-    prompt = f"""Extract every named entity from the content below, grouped into these categories:
+    prompt = f"""Extract named entities that LITERALLY APPEAR in the content below,
+grouped into these categories:
 
-  - files     : source files / paths (e.g. "drivers/servo.cpp", "src/auth/jwt.ts")
-  - symbols   : functions, classes, methods (e.g. "ServoController.set_torque", "verifyToken")
-  - errors    : exception types, error codes, error messages
-  - packages  : external libraries / packages / npm modules / pip packages
-  - urls      : http or https URLs
-  - concepts  : named products, services, hardware parts, domain concepts
+  - files     : source file names or paths that appear verbatim in the text
+  - symbols   : function / class / method names that appear verbatim
+  - errors    : exception types / error codes / error messages that appear verbatim
+  - packages  : library or package names that appear verbatim
+  - urls      : http or https URLs that appear verbatim
+  - concepts  : named products, services, hardware parts, or domain terms named in the text
 
-Rules:
-- Be liberal — include anything that looks like a name an engineer would search for.
-- One mention per entity (dedupe).
-- Empty array if the category isn't present.
-- Output JSON only.
+STRICT RULES:
+- Extract ONLY strings that actually occur in the CONTENT below. Do NOT invent,
+  infer, guess, or copy anything from these instructions. If you are not certain
+  a string literally appears in the content, leave it out.
+- If a category has nothing, return an empty array [].
+- Dedupe. Output the JSON object only — no commentary, no examples.
 
 Schema:
 {{"files":[],"symbols":[],"errors":[],"packages":[],"urls":[],"concepts":[]}}

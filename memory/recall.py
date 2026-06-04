@@ -29,6 +29,10 @@ from config import cfg
 RECENCY_HALF_LIFE_DAYS = 30.0   # a note this old keeps half its recency lift
 RECENCY_WEIGHT = 0.6            # how much recency lifts a similar note (0 = pure semantic)
 FETCH_MULTIPLIER = 4            # over-fetch candidates before fusing/trimming
+RELEVANCE_FLOOR = 0.30         # min semantic similarity to count as "related".
+                               # Below this, recall returns NOTHING rather than
+                               # padding to k with near-misses — so the summary
+                               # never fabricates "you've hit this N times".
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -91,19 +95,20 @@ def summarize(problem: str, ranked: list[dict]) -> str:
     """One-line headline for the platter: how many times, how recent, what
     happened. The 'treat' served on top of the matches."""
     if not ranked:
-        return f"No prior memory resembles: {problem!r}. This looks new."
+        return "Nothing in memory closely matches this yet — looks new."
     n = len(ranked)
     top = ranked[0]
     age = top.get("age_days", 0)
     when = "today" if age < 1 else f"{int(age)}d ago"
     out = top.get("outcome", "unknown")
-    verb = {"resolved": "was fixed", "failed": "failed", "open": "is still open",
-            "unknown": "was logged"}.get(out, "was logged")
+    verb = {"resolved": "was resolved", "failed": "failed (didn't hold)",
+            "open": "is still open", "unknown": "was logged"}.get(out, "was logged")
     tried = (top.get("what_was_tried") or "").strip()
-    tail = f" by: {tried[:120]}" if tried and out == "resolved" else ""
-    plural = "time" if n == 1 else "times"
-    return (f"You've hit something like this {n} {plural}. "
-            f"Most recent ({when}) {verb}{tail}.")
+    tail = f" — {tried[:120]}" if tried else ""
+    noun = "related note" if n == 1 else "related notes"
+    # Honest: this is "how many genuinely-related notes exist", NOT a fabricated
+    # count of times you hit the exact problem.
+    return f"{n} {noun} in memory. Closest ({when}) {verb}{tail}."
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -194,6 +199,10 @@ def recall(problem: str, k: int = 5) -> dict:
     for dn, c in best.items():
         c.update(_note_meta(dn))
         candidates.append(c)
+
+    # Keep only genuinely-related notes. Below the floor, drop it — recall stays
+    # honest (returns nothing rather than near-misses presented as history).
+    candidates = [c for c in candidates if c.get("similarity", 0) >= RELEVANCE_FLOOR]
 
     ranked = fuse(candidates, k=k)
     return {

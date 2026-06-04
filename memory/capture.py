@@ -126,11 +126,33 @@ def _enrich_in_background(path: str, text: str, kind: str, title: str,
             subsystem = "unknown"
 
         fields = dict(result.get("fields") or {})
-        # keep the verbatim original available even after structuring
-        fields.setdefault("context_raw", text[:1500])
 
-        # Overwrite the provisional note with the structured one. Same kind +
-        # title → same slug → same file. overwrite=True replaces it cleanly.
+        # CRITICAL: always preserve the full raw text. This is the source of
+        # truth — structure is derived from it. FORCE it (the extractor can
+        # return an empty context_raw, which must NEVER be allowed to wipe the
+        # original). setdefault was the data-loss bug.
+        fields["context_raw"] = text[:16000]
+
+        # GUARD: if the extraction produced essentially nothing (model hiccup,
+        # empty/unparseable JSON), do NOT overwrite — the provisional note
+        # already holds the full raw text. Overwriting with an empty structure
+        # would destroy content. Keep the provisional instead.
+        structured = {
+            k: v for k, v in fields.items()
+            if k not in ("context_raw", "tldr") and isinstance(v, str) and v.strip()
+        }
+        if not structured:
+            print("[capture] extraction yielded no structure — keeping provisional "
+                  "note (full raw text already preserved)", file=sys.stderr)
+            return
+
+        # Drop empty entity categories so an empty/garbage extraction doesn't
+        # write phantom entities.
+        entities = {k: v for k, v in (result.get("entities") or {}).items() if v}
+
+        # Overwrite the provisional with the structured note. Same kind + title
+        # → same slug → same file. The forced context_raw guarantees the raw
+        # text survives the overwrite no matter what.
         log_universal(
             kind=kind,
             title=title,
@@ -139,7 +161,7 @@ def _enrich_in_background(path: str, text: str, kind: str, title: str,
             tags=result.get("tags", []),
             status=result.get("status", ""),
             confidence=result.get("confidence", ""),
-            entities=result.get("entities"),
+            entities=entities,
             overwrite=True,
             enrich=True,
         )
@@ -169,7 +191,7 @@ def capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     content = render(
         kind=kind,
         title=title,
-        fields={"tldr": title, "context_raw": text[:1500]},
+        fields={"tldr": title, "context_raw": text[:16000]},
         note_id=f"{datetime.now().strftime('%Y-%m-%d')}_{slug}",
         subsystem="unknown",
     )
