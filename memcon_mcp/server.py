@@ -36,6 +36,12 @@ from memory.writer import (
 from memory.qdrant_store import ensure_collection, get_stats
 from memory.templates import ALL_KINDS
 
+# Quiet noisy third-party per-request logging on the MCP server so stderr stays
+# readable. (stdout is the MCP wire; these libraries already log to stderr.)
+import logging as _logging
+for _n in ("httpx", "httpcore", "qdrant_client", "sentence_transformers", "urllib3"):
+    _logging.getLogger(_n).setLevel(_logging.WARNING)
+
 mcp = FastMCP("memcon")
 
 # Load .env from the REPO dir explicitly. Claude Desktop spawns this server with

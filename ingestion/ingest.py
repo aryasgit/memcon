@@ -15,7 +15,12 @@ except Exception:
 # *_REFERENCE is treated as private and skipped by EVERY ingest path (the
 # walker, the watcher, and writer re-ingests), so a private doc on disk can
 # never leak into memcon_query / memcon_recall results.
-_PRIVATE_RE = re.compile(r"(PRIVATE|STRATEGY|ROADMAP|_REFERENCE)", re.IGNORECASE)
+#
+# Matched CASE-SENSITIVELY — the markers are an ALL-CAPS convention. With the old
+# re.IGNORECASE, an ordinary note whose title merely contained "reference" /
+# "strategy" / "roadmap" / "private" (e.g. a "Caching strategy" decision, or an
+# "advisory locks quick reference" note) was SILENTLY excluded from search.
+_PRIVATE_RE = re.compile(r"(PRIVATE|STRATEGY|ROADMAP|_REFERENCE)")
 
 
 def _is_excluded(filepath: str) -> bool:
