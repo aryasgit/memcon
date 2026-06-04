@@ -39,24 +39,33 @@ def _get_client() -> QdrantClient:
 
 
 _collection_ready = False
+_collection_lock = threading.Lock()
 
 
 def ensure_collection():
-    """Create the collection if missing. Memoized — after the first success this
-    is a no-op, so we don't pay a get_collections() round-trip on every single
-    ingest (which, under the watcher storm, was ~140 wasted round-trips)."""
+    """Create the collection if missing. Memoized + LOCKED so many concurrent
+    writers don't race on create_collection (which 409s for all but one). Also
+    tolerates a concurrent create from another thread / process / MCP client."""
     global _collection_ready
     if _collection_ready:
         return
-    client = _get_client()
-    existing = [c.name for c in client.get_collections().collections]
-    if COLLECTION not in existing:
-        client.create_collection(
-            collection_name=COLLECTION,
-            vectors_config=VectorParams(size=DIM, distance=Distance.COSINE),
-        )
-        print(f"[qdrant] Created collection: {COLLECTION}", file=sys.stderr)
-    _collection_ready = True
+    with _collection_lock:
+        if _collection_ready:
+            return
+        client = _get_client()
+        try:
+            existing = [c.name for c in client.get_collections().collections]
+            if COLLECTION not in existing:
+                client.create_collection(
+                    collection_name=COLLECTION,
+                    vectors_config=VectorParams(size=DIM, distance=Distance.COSINE),
+                )
+                print(f"[qdrant] Created collection: {COLLECTION}", file=sys.stderr)
+        except Exception as e:
+            # Lost the create race to another writer — that's fine, it exists now.
+            if "already exists" not in str(e).lower():
+                raise
+        _collection_ready = True
 
 
 def _point_id(chunk_id: str) -> str:
