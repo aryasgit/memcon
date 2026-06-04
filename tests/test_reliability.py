@@ -226,11 +226,13 @@ def test_capture_provisional_is_llm_free(monkeypatch):
 
 
 # ── MCP server surface ────────────────────────────────────────────────────
-def test_mcp_server_registers_18_tools():
+def test_mcp_server_registers_all_tools():
     import asyncio
     import memcon_mcp.server as s
     tools = asyncio.run(s.mcp.list_tools())
-    assert len(tools) == 18, f"expected 18 tools, got {len(tools)}"
+    names = {t.name for t in tools}
+    assert len(tools) == 19, f"expected 19 tools, got {len(tools)}: {sorted(names)}"
+    assert "memcon_read" in names
 
 
 def test_mcp_llm_client_has_timeout():
@@ -311,3 +313,49 @@ def test_find_related_skips_when_model_is_cold(monkeypatch):
     monkeypatch.setattr(emb, "get_model", explode)
     # Must return [] immediately without touching the model (no hang, no download).
     assert writer._find_related("some query text about servos", exclude_doc="x") == []
+
+
+# ── Launch-readiness: memcon_read, empty-input guard, upsert-first replace ──
+def _call_tool(server_module, name, **kwargs):
+    fn = getattr(server_module, name)
+    fn = getattr(fn, "fn", fn)   # unwrap a FastMCP FunctionTool if present
+    return fn(**kwargs)
+
+
+def test_memcon_read_returns_full_note_and_is_traversal_safe():
+    import memcon_mcp.server as s
+    from config import cfg
+    vault = Path(cfg('vault', 'path'))
+    (vault / "debugging").mkdir(parents=True, exist_ok=True)
+    note = vault / "debugging" / "zz_read_test.md"
+    note.write_text("---\nid: zz_read_test\n---\n\n# Title\n\n## Context\n\nfull body here about servos and power\n")
+    try:
+        out = _call_tool(s, "memcon_read", doc_name="zz_read_test")
+        assert out.get("doc_name") == "zz_read_test"
+        assert "full body here about servos" in out.get("content", ""), "must return the WHOLE note, not an excerpt"
+        assert "error" in _call_tool(s, "memcon_read", doc_name="does_not_exist_xyz")
+        assert "error" in _call_tool(s, "memcon_read", doc_name="../../../../etc/passwd")  # traversal neutralised
+    finally:
+        note.unlink(missing_ok=True)
+
+
+def test_memcon_capture_rejects_empty_text():
+    import memcon_mcp.server as s
+    assert "error" in _call_tool(s, "memcon_capture", text="   ")
+
+
+@requires_qdrant
+def test_replace_doc_prunes_stale_chunks_on_shrink():
+    from memory.qdrant_store import replace_doc, search, delete_by_doc
+    from ingestion.embedder import embed
+    doc = "zz_replace_test"
+    try:
+        c3 = [{"text": f"chunk {i} about servo brownout and power rail design", "chunk_id": f"{doc}_{i}", "doc_name": doc} for i in range(3)]
+        replace_doc(doc, c3, embed([c["text"] for c in c3]))
+        c1 = [{"text": "only one chunk now about servo brownout and power", "chunk_id": f"{doc}_0", "doc_name": doc}]
+        replace_doc(doc, c1, embed([c["text"] for c in c1]))   # shrink 3 -> 1
+        hits = search(embed(["servo brownout power rail"])[0], top_k=25)
+        doc_hits = [h for h in hits if h.get("doc_name") == doc]
+        assert len(doc_hits) == 1, f"stale chunks not pruned after shrink: {len(doc_hits)}"
+    finally:
+        delete_by_doc(doc)

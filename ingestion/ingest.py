@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from pathlib import Path
 from ingestion.chunker import chunk_file
 from ingestion.embedder import embed
-from memory.qdrant_store import ensure_collection, upsert_chunks, delete_by_doc
+from memory.qdrant_store import ensure_collection, upsert_chunks, delete_by_doc, replace_doc
 
 try:
     from config import cfg
@@ -61,8 +61,11 @@ def ingest_file(filepath: str, force: bool = False) -> int:
     # chunks (which is how an emptied-then-refilled note stayed unsearchable).
     doc = chunks[0].get("doc_name")
     if doc:
-        delete_by_doc(doc)
-    n = upsert_chunks(chunks, vectors)
+        # Upsert-first replace: a concurrent reader never sees the doc with zero
+        # chunks mid-ingest (the old delete-then-upsert had that gap).
+        n = replace_doc(doc, chunks, vectors)
+    else:
+        n = upsert_chunks(chunks, vectors)
     _manifest_touch(stem, mtime)
     print(f"[ingest] {filepath} → {n} chunks added", file=sys.stderr)
     return n

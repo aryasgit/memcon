@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, PointStruct,
-    Filter, FieldCondition, MatchValue
+    Filter, FieldCondition, MatchValue, HasIdCondition
 )
 from config import cfg
 
@@ -59,16 +59,44 @@ def ensure_collection():
     _collection_ready = True
 
 
-def upsert_chunks(chunks: list[dict], vectors: list[list[float]]) -> int:
-    points = [
-        PointStruct(
-            id=str(uuid.uuid5(uuid.NAMESPACE_URL, c["chunk_id"])),
-            vector=v,
-            payload=c,
-        )
+def _point_id(chunk_id: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, chunk_id))
+
+
+def _build_points(chunks: list[dict], vectors: list[list[float]]) -> list:
+    return [
+        PointStruct(id=_point_id(c["chunk_id"]), vector=v, payload=c)
         for c, v in zip(chunks, vectors)
     ]
+
+
+def upsert_chunks(chunks: list[dict], vectors: list[list[float]]) -> int:
+    points = _build_points(chunks, vectors)
     _get_client().upsert(collection_name=COLLECTION, points=points)
+    return len(points)
+
+
+def replace_doc(doc_name: str, chunks: list[dict], vectors: list[list[float]]) -> int:
+    """Replace all points for a doc, UPSERT-FIRST: upsert the new set, THEN delete
+    only this doc's STALE points (ids not in the new set). The old path did
+    delete-then-upsert, which left a brief window where a concurrent reader saw
+    the doc with ZERO chunks. Point ids are deterministic per (file, chunk), so
+    upserting first cleanly replaces same-id points; the stale-delete then removes
+    only points that a shrunken/edited note no longer has."""
+    points = _build_points(chunks, vectors)
+    client = _get_client()
+    client.upsert(collection_name=COLLECTION, points=points)
+    keep_ids = [p.id for p in points]
+    try:
+        client.delete(
+            collection_name=COLLECTION,
+            points_selector=Filter(
+                must=[FieldCondition(key="doc_name", match=MatchValue(value=doc_name))],
+                must_not=[HasIdCondition(has_id=keep_ids)],
+            ),
+        )
+    except Exception as e:
+        print(f"[qdrant] replace_doc stale-delete failed for {doc_name}: {e}", file=sys.stderr)
     return len(points)
 
 def delete_by_doc(doc_name: str) -> None:

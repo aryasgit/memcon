@@ -92,7 +92,10 @@ def memcon_query(query: str, top_k: int = 5, subsystem: str | None = None) -> di
         subsystem: Optional filter (e.g. "servo", "imu", "gait").
 
     Returns: { "results": [ {score, text, doc_name, subsystem, memory_type, tags}, ... ] }
+
+    Tip: results are matched EXCERPTS; call memcon_read(doc_name) for a hit's full note.
     """
+    top_k = max(1, min(int(top_k or 5), 50))
     _autosync()
     ensure_collection()
     results = _query(query, top_k=top_k, subsystem=subsystem)
@@ -113,6 +116,7 @@ def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
 
     Returns: { "answer", "sources", "chunks_used", "raw_chunks" }
     """
+    top_k = max(1, min(int(top_k or 5), 50))
     _autosync()
     ensure_collection()
     results = _query(question, top_k=top_k, subsystem=subsystem)
@@ -195,10 +199,51 @@ def memcon_recall(problem: str, k: int = 5) -> dict:
                matches: [{doc_name, title, similarity, age_days, recency,
                           score, outcome, what_was_tried, excerpt}],
                count }
+
+    Each match is an EXCERPT — call memcon_read(doc_name) for a match's FULL note
+    before concluding anything about its contents.
     """
+    k = max(1, min(int(k or 5), 50))
     _autosync()
     from memory.recall import recall as _recall
     return _recall(problem, k=k)
+
+
+@mcp.tool()
+def memcon_read(doc_name: str) -> dict:
+    """Return the FULL markdown of a single note by its `doc_name`.
+
+    memcon_query / memcon_recall return matched EXCERPTS (chunks), not whole
+    notes — so after a hit, call memcon_read(doc_name) to get the entire note
+    body before concluding anything about its contents. (A note that looks like
+    only a title in search results almost always has a full body on disk.)
+
+    Args:
+        doc_name: the note's doc_name / id from a query or recall result
+                  (e.g. "2026-06-05_rr_servo_brownout").
+
+    Returns: { doc_name, path, content }  or  { error }.
+    """
+    from pathlib import Path
+    name = Path((doc_name or "").strip()).name      # basename → no path traversal
+    if name.endswith(".md"):
+        name = name[:-3]
+    if not name:
+        return {"error": "empty doc_name"}
+    vault = Path(cfg('vault', 'path')).resolve()
+    try:
+        matches = [p for p in sorted(vault.rglob(f"{name}.md"))
+                   if str(p.resolve()).startswith(str(vault) + os.sep)]
+    except Exception as e:
+        return {"error": f"lookup failed: {e}"}
+    if not matches:
+        return {"error": f"no note found with doc_name '{name}'"}
+    p = matches[0]
+    try:
+        content = p.read_text(errors="ignore")[:200_000]
+    except OSError as e:
+        return {"error": f"could not read note: {e}"}
+    return {"doc_name": name, "path": str(p.relative_to(vault.parent)), "content": content}
 
 
 @mcp.tool()
@@ -280,7 +325,10 @@ def memcon_update_note(filepath: str, content: str) -> dict:
     session gets resolved). `filepath` is the path returned by an earlier
     memcon_write_* call, or a doc_name visible in memcon_query results.
     """
-    path = update_note(filepath, content)
+    try:
+        path = update_note(filepath, content)
+    except (FileNotFoundError, ValueError) as e:
+        return {"error": str(e)}
     return {"status": "updated", "path": path}
 
 
@@ -528,6 +576,8 @@ def memcon_capture(text: str, hint: str = "auto", run_critique: bool = False) ->
     The note at `path` exists and is searchable immediately; structured
     sections + entities appear shortly after.
     """
+    if not text or not text.strip():
+        return {"error": "nothing to save — `text` is empty"}
     from memory.capture import capture as _capture
     try:
         return _capture(text, hint=hint, run_critique=run_critique)
