@@ -210,19 +210,28 @@ def capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     with note_lock(path):
         atomic_write_text(path, content)
 
-    # Background: full multi-pass extraction → log_universal(overwrite=True),
-    # which does related-links + adaptive template + entities + ingest + enrich.
-    # Routed through the SHARED bounded worker pool (not a fresh thread per
-    # capture) so a burst of captures can't fan out into dozens of concurrent
-    # LLM passes + embeds and thrash the machine.
-    from memory.worker import submit
-    submit(_enrich_in_background, path, text, kind, title, run_critique)
+    # Background structuring needs a LOCAL LLM, which is OPTIONAL. Only enqueue it
+    # when one is reachable (routed through the shared bounded worker pool so a
+    # burst can't stampede). Without a local LLM, the instant raw note stands —
+    # already searchable — and the assistant can structure it via memcon_write_*.
+    from memory.llm import is_available
+    llm_on = is_available()
+    if llm_on:
+        from memory.worker import submit
+        submit(_enrich_in_background, path, text, kind, title, run_critique)
+        note = ("Saved instantly — raw text already searchable. A local LLM is "
+                "structuring it into sections + entities in the background; no need "
+                "to wait or re-call.")
+    else:
+        wk = kind if kind in ALL_KINDS else "<kind>"
+        note = ("Saved instantly — raw text preserved and already searchable. No "
+                "local LLM is configured, so for a richer structured note, extract "
+                f"the fields yourself and call memcon_write_{wk}.")
 
     return {
         "status": "saved",
         "kind": kind,
         "path": path,
-        "note": ("Note written and will be fully searchable shortly. Structured "
-                 "sections + entities are being extracted in the background and "
-                 "fill in automatically within ~a minute — no need to wait or re-call."),
+        "structured": llm_on,
+        "note": note,
     }

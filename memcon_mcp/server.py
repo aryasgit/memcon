@@ -46,27 +46,12 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 import time as _time
 
-_llm_client = None
-
-
 def _get_llm():
-    """Shared OpenAI-compatible (Ollama) client built once, WITH A HARD TIMEOUT.
-    The timeout means a hung or cold-loading model can't block an memcon_ask /
-    memcon_digest call forever — it errors out and the tool degrades to returning
-    the raw memory chunks instead of freezing the stdio connection."""
-    global _llm_client
-    if _llm_client is None:
-        from openai import OpenAI
-        try:
-            t = float(cfg('llm', 'timeout'))
-        except Exception:
-            t = 90.0
-        _llm_client = OpenAI(
-            base_url=cfg('llm', 'base_url'),
-            api_key=os.getenv("LLM_API_KEY", "ollama"),
-            timeout=t,
-        )
-    return _llm_client
+    """Shared OPTIONAL local-LLM client with a hard timeout (see memory.llm).
+    Callers gate on memory.llm.is_available() first — memcon runs fine with no
+    local LLM (the assistant does the reasoning)."""
+    from memory.llm import get_client
+    return get_client()
 
 
 _last_autosync = [0.0]
@@ -146,6 +131,17 @@ def memcon_ask(question: str, top_k: int = 5, subsystem: str | None = None) -> d
         f"CONTEXT:\n{context}\n\nQUESTION: {question}\n\nANSWER:"
     )
     sources = sorted({r["doc_name"] for r in results})
+    from memory.llm import is_available
+    if not is_available():
+        # Lean mode (no local LLM): hand the grounding chunks back so YOU, the
+        # calling assistant, compose the answer. This is the default path.
+        return {
+            "answer": None,
+            "note": "No local LLM configured — compose the answer yourself from raw_chunks.",
+            "sources": sources,
+            "chunks_used": len(results),
+            "raw_chunks": results,
+        }
     try:
         resp = _get_llm().chat.completions.create(
             model=cfg('llm', 'model'),
@@ -460,6 +456,16 @@ def memcon_digest(since_days: int = 7) -> dict:
         f"NOTES:\n{bundle}\n\n"
         "DIGEST:"
     )
+    from memory.llm import is_available
+    if not is_available():
+        # Lean mode: no local LLM. Hand the recent notes back for YOU to summarise.
+        return {
+            "summary": None,
+            "note": "No local LLM configured — summarise the notes below yourself.",
+            "notes": [{"name": n, "folder": f} for n, f, _, _ in recent],
+            "notes_considered": len(recent),
+            "since_days": since_days,
+        }
     try:
         resp = _get_llm().chat.completions.create(
             model=cfg('llm', 'model'),

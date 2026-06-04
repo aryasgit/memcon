@@ -23,14 +23,21 @@ IF %ERRORLEVEL% NEQ 0 (
 )
 echo OK: Docker found
 
-REM ── CHECK OLLAMA ─────────────────────────
-ollama --version >nul 2>&1
-IF %ERRORLEVEL% NEQ 0 (
-  echo ERROR: Ollama not found. Install from https://ollama.com/download/windows
-  pause
-  exit /b 1
+REM ── OPTIONAL: LOCAL LLM (Ollama) ─────────
+REM memcon works WITHOUT a local LLM - the assistant (Claude) does the reasoning.
+REM Opt in for fully-offline LLM features: set MEMCON_WITH_OLLAMA=1 before running.
+set WITH_OLLAMA=0
+IF "%MEMCON_WITH_OLLAMA%"=="1" (
+  ollama --version >nul 2>&1
+  IF !ERRORLEVEL! EQU 0 (
+    set WITH_OLLAMA=1
+    echo OK: Ollama found
+  ) ELSE (
+    echo WARNING: Ollama not found - continuing lean. Get it at https://ollama.com/download/windows
+  )
+) ELSE (
+  echo Lean install - no local LLM. Re-run with: set MEMCON_WITH_OLLAMA=1 for offline LLM features.
 )
-echo OK: Ollama found
 
 REM ── DETECT RAM ───────────────────────────
 for /f "skip=1" %%i in ('wmic computersystem get TotalPhysicalMemory') do (
@@ -74,13 +81,17 @@ IF EXIST requirements.txt (
     gitpython rich openai pyyaml mcp
 )
 
-REM ── WRITE MODEL INTO CONFIG (anchored regex) ─
-python -c "import re; p='memcon.config.yaml'; s=open(p).read(); s=re.sub(r'(?m)^  model: \".*\"', '  model: \"%MODEL%\"', s); open(p,'w').write(s)"
-echo Config updated with model: %MODEL%
+REM ── WRITE MODEL INTO CONFIG (only with a local LLM) ─
+IF "%WITH_OLLAMA%"=="1" (
+  python -c "import re; p='memcon.config.yaml'; s=open(p).read(); s=re.sub(r'(?m)^  model: \".*\"', '  model: \"%MODEL%\"', s); open(p,'w').write(s)"
+  echo Config updated with model: %MODEL%
+)
 
-REM ── PULL LLM ─────────────────────────────
-echo Pulling LLM: %MODEL% (may take a few minutes)...
-ollama pull %MODEL%
+REM ── PULL LLM (only with a local LLM) ─────
+IF "%WITH_OLLAMA%"=="1" (
+  echo Pulling LLM: %MODEL% (may take a few minutes)...
+  ollama pull %MODEL%
+)
 
 REM ── START QDRANT ─────────────────────────
 echo Starting Qdrant...
@@ -89,14 +100,15 @@ timeout /t 3 >nul
 
 REM ── VAULT STRUCTURE ──────────────────────
 echo Setting up vault...
-IF NOT EXIST vault\debugging   mkdir vault\debugging
-IF NOT EXIST vault\decisions   mkdir vault\decisions
-IF NOT EXIST vault\experiments mkdir vault\experiments
-IF NOT EXIST vault\hardware    mkdir vault\hardware
-IF NOT EXIST vault\firmware    mkdir vault\firmware
-IF NOT EXIST vault\telemetry   mkdir vault\telemetry
-IF NOT EXIST vault\gait        mkdir vault\gait
-IF NOT EXIST vault\_templates  mkdir vault\_templates
+IF NOT EXIST vault\_templates    mkdir vault\_templates
+IF NOT EXIST vault\debugging     mkdir vault\debugging
+IF NOT EXIST vault\decisions     mkdir vault\decisions
+IF NOT EXIST vault\experiments   mkdir vault\experiments
+IF NOT EXIST vault\concepts      mkdir vault\concepts
+IF NOT EXIST vault\references    mkdir vault\references
+IF NOT EXIST vault\meetings      mkdir vault\meetings
+IF NOT EXIST vault\breakthroughs mkdir vault\breakthroughs
+IF NOT EXIST vault\sessions      mkdir vault\sessions
 
 REM ── INGEST VAULT ─────────────────────────
 echo Ingesting vault...
@@ -111,7 +123,11 @@ IF NOT DEFINED MEMCON_SKIP_MCP (
 echo.
 echo ╔══════════════════════════════════════╗
 echo ║        Setup complete!               ║
-echo ║  Model: %MODEL%
+IF "%WITH_OLLAMA%"=="1" (
+  echo ║  Local LLM: %MODEL%
+) ELSE (
+  echo ║  Mode: lean ^(no local LLM - Claude reasons^)
+)
 echo ║  Run:   start.bat                    ║
 echo ╚══════════════════════════════════════╝
 pause

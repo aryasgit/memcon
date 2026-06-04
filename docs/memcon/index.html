@@ -669,7 +669,7 @@
         <span class="label">What it does</span>
         <span><strong>Plugs into Claude over MCP.</strong> Reads your vault before answering. Writes every solved bug back into it. No cloud.</span>
         <span class="label" style="margin-top:.5rem">Runs on</span>
-        <span><strong>macOS · Linux · WSL · Windows.</strong> Docker + Python. Local LLM via Ollama.</span>
+        <span><strong>macOS · Linux · WSL · Windows.</strong> Docker + Python. Local LLM optional.</span>
       </div>
       <div class="start-row">
         <span class="label">Start</span>
@@ -819,7 +819,7 @@
       </div>
       <div class="stat">
         <div class="big">0<sup>cloud</sup></div>
-        <div class="lab"><strong>Local Qdrant.</strong> Local Ollama. Local embeddings. Your code never leaves your laptop.</div>
+        <div class="lab"><strong>Local Qdrant.</strong> Local embeddings. Optional local LLM. Your code never leaves your laptop.</div>
       </div>
       <div class="stat">
         <div class="big">$0<sup>fee</sup></div>
@@ -933,8 +933,8 @@
 
     <div class="install-grid reveal">
       <div class="install-left">
-        <h3 class="tight">Detects your RAM. Pulls the right local LLM. Registers itself with Claude Desktop.</h3>
-        <p>The bootstrap script installs Docker if missing, brings up Qdrant + Ollama, picks a model from <span class="mono">llama3.2:1b</span> → <span class="mono">qwen2.5-coder:32b</span> based on machine size, then patches your <span class="mono">claude_desktop_config.json</span> so the MCP server is wired up on Claude's next restart.</p>
+        <h3 class="tight">Lean by default — Claude does the reasoning. Registers itself with Claude Desktop.</h3>
+        <p>The bootstrap script installs Docker if missing, brings up Qdrant, ingests your starter vault, then patches your <span class="mono">claude_desktop_config.json</span> so the MCP server is wired up on Claude's next restart. No local LLM required — Claude does the reasoning. Want fully-offline LLM features? Re-run with <span class="mono">MEMCON_WITH_OLLAMA=1</span>.</p>
         <ul>
           <li>Docker · Python 3.10+ required</li>
           <li>~8 GB disk · ~6 GB RAM for the default model</li>
@@ -1077,8 +1077,8 @@
   // ── MCP tool wall ──────────────────────────────────
   var TOOLS = [
     { n:'memcon_query',           k:'read',     d:'Semantic search over your vault. Returns the top-K chunks by embedding similarity. The most-used read tool — Claude reaches for this before answering almost anything.', sig:'memcon_query(question: str, top_k: int = 5)' },
-    { n:'memcon_ask',             k:'read',     d:'Asks the local LLM a question grounded in your vault. Same retrieval as query, but with a synthesised answer + cited sources.', sig:'memcon_ask(question: str)' },
-    { n:'memcon_capture',         k:'write',    d:'Single natural-language write. Pass a freeform paragraph; the local LLM extracts title / symptom / cause / fix and creates the note.', sig:'memcon_capture(text: str, subsystem?: str)' },
+    { n:'memcon_ask',             k:'read',     d:'Returns vault chunks grounded to your question, with cited sources, for the assistant to answer from. With an optional local LLM, also synthesises the answer itself.', sig:'memcon_ask(question: str)' },
+    { n:'memcon_capture',         k:'write',    d:'Single natural-language write. Pass a freeform paragraph; it is captured instantly (raw text searchable). With an optional local LLM it auto-structures into title / symptom / cause / fix in the background.', sig:'memcon_capture(text: str, subsystem?: str)' },
     { n:'memcon_write_debug',     k:'write',    d:'Structured debug note: title, symptom, cause, fix, subsystem. Auto-tagged, auto-linked to top-3 semantic neighbours.', sig:'memcon_write_debug(title, symptom, cause, fix, subsystem)' },
     { n:'memcon_write_decision',  k:'write',    d:'A decision note: title, context, decision, alternatives, consequences. The record of why something is the way it is.', sig:'memcon_write_decision(title, context, decision, alternatives, consequences)' },
     { n:'memcon_write_experiment',k:'write',    d:'An experiment record: hypothesis, setup, result, conclusion. For when you tried something and want to remember whether it worked.', sig:'memcon_write_experiment(title, hypothesis, setup, result, conclusion)' },

@@ -34,17 +34,11 @@ _client = None
 
 
 def _get_llm():
-    """Lazily build an OpenAI-compatible client pointed at the local LLM."""
-    global _client
-    if _client is None:
-        from openai import OpenAI
-        from dotenv import load_dotenv
-        load_dotenv()
-        _client = OpenAI(
-            base_url=cfg('llm', 'base_url'),
-            api_key=os.getenv("LLM_API_KEY", "ollama"),
-        )
-    return _client
+    """The shared OPTIONAL local-LLM client (see memory.llm). Callers gate on
+    memory.llm.is_available() first — without a local LLM, extraction is skipped
+    and the raw captured note stands."""
+    from memory.llm import get_client
+    return get_client()
 
 
 def _ask_json(prompt: str, *, max_tokens: int | None = None, temperature: float = 0.1) -> dict:
@@ -354,6 +348,18 @@ def extract(
           "meta": { "classify_reason": "...", "passes_run": [...] }
         }
     """
+    from memory.llm import is_available
+    if not is_available():
+        # No local LLM — return an empty structure so the caller keeps the raw
+        # note. (capture() also checks is_available() before enqueuing, so this
+        # is a defensive fast-path for any other caller.)
+        return {
+            "kind": hint if (hint and hint in ALL_KINDS) else "session",
+            "title": "", "fields": {}, "subsystem": "unknown", "tags": [],
+            "status": "", "confidence": "", "entities": {},
+            "meta": {"passes_run": [], "llm": "unavailable"},
+        }
+
     passes: list[str] = []
 
     # ── Pass 1: classify ─────────────────────────────────────────────────────

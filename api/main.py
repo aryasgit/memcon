@@ -259,6 +259,16 @@ CONTEXT:
 QUESTION: {req.question}
 
 ANSWER:"""
+    from memory.llm import is_available
+    if not is_available():
+        # Lean mode: no local LLM — return the grounding chunks for the caller.
+        return {
+            "answer": None,
+            "note": "No local LLM configured — compose the answer from raw_chunks.",
+            "sources": list(set(r["doc_name"] for r in results)),
+            "chunks_used": len(results),
+            "raw_chunks": results,
+        }
     try:
         response = llm.chat.completions.create(
             model=cfg('llm','model'),

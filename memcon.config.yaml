@@ -15,10 +15,18 @@ memory:
   vector_dim: 384
 
 llm:
-  provider: "ollama"
+  # A local LLM is OPTIONAL. memcon works without it — the assistant (Claude)
+  # does the reasoning, and memcon handles storage + embeddings + retrieval
+  # (those use sentence-transformers, NOT a local LLM). Install Ollama only for
+  # fully-offline auto-structuring / self-contained answers (opt in at install
+  # time with MEMCON_WITH_OLLAMA=1). When no local LLM is reachable, capture
+  # keeps the raw note and ask/digest return the chunks for you to use.
+  provider: "ollama"          # set to "none" to force the no-LLM (lean) path
+  enabled: true               # auto-detected: a present Ollama is used, an absent one degrades
   model: "qwen2.5-coder:7b"
   base_url: "http://localhost:11434/v1"
   max_tokens: 1024
+  timeout: 90                 # hard per-call ceiling (seconds) so a hung model can't block
 
 qdrant:
   host: "localhost"

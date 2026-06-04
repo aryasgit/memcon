@@ -243,3 +243,46 @@ def test_mcp_autosync_is_nonblocking():
     t0 = time.time()
     s._autosync(); s._autosync()
     assert time.time() - t0 < 0.5, "autosync is blocking the read path"
+
+
+# ── Lean / Ollama-optional ────────────────────────────────────────────────
+def test_llm_enabled_by_default():
+    from memory import llm
+    # Default on, so a present Ollama auto-works; the probe handles 'not installed'.
+    assert llm.enabled() is True
+
+
+def test_capture_lean_keeps_raw_note_without_llm(monkeypatch):
+    import memory.llm as llm
+    monkeypatch.setattr(llm, "is_available", lambda *a, **k: False)
+    from memory.capture import capture
+    res = capture("Lean note: the IMU drifted during the turn; recalibrated the bias offset.", hint="debug")
+    p = res["path"]
+    try:
+        assert res["structured"] is False, "must not claim background structuring without a local LLM"
+        assert "memcon_write_debug" in res["note"], "should steer the assistant to the LLM-free write tool"
+        assert "IMU drifted" in open(p).read(), "raw text must be preserved"
+    finally:
+        if os.path.exists(p):
+            os.remove(p)
+
+
+def test_extract_skips_cleanly_without_llm(monkeypatch):
+    import memory.llm as llm
+    monkeypatch.setattr(llm, "is_available", lambda *a, **k: False)
+    from memory.extractor import extract
+    out = extract("anything at all here", hint="debug")
+    assert out["meta"].get("llm") == "unavailable"
+    assert out["fields"] == {} and out["entities"] == {}, "no LLM should mean no fabricated structure"
+
+
+def test_api_ask_degrades_to_chunks_without_llm(monkeypatch):
+    import memory.llm as llm
+    monkeypatch.setattr(llm, "is_available", lambda *a, **k: False)
+    import api.main as A
+    monkeypatch.setattr(A, "query", lambda *a, **k: [
+        {"doc_name": "d1", "text": "t", "subsystem": "", "memory_type": "", "score": 0.9}
+    ])
+    out = A.ask(A.AskRequest(question="anything"))
+    assert out["answer"] is None and out["raw_chunks"], "lean ask must return chunks for the caller"
+    assert "No local LLM" in out["note"]

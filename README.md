@@ -97,10 +97,15 @@ curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh |
 iwr -useb https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.ps1 | iex
 ```
 
-Either one clones into `~/memcon`, installs deps, picks the right LLM for
-your RAM, pulls it via Ollama, starts Qdrant, ingests the starter vault, **and
-auto-registers Memcon in your Claude Desktop config** (preserves any
-existing MCP servers). Takes 5–10 minutes the first time.
+Either one clones into `~/memcon`, installs deps, starts Qdrant, ingests the
+starter vault, **and auto-registers Memcon in your Claude Desktop config**
+(preserves any existing MCP servers). Takes ~2–3 minutes the first time.
+
+**Lean by default — no local LLM.** Claude does the reasoning; Memcon handles
+storage + search (embeddings run locally via sentence-transformers, no Ollama).
+Want fully-offline auto-structuring / self-contained answers? Opt in by setting
+`MEMCON_WITH_OLLAMA=1` before the one-liner — it installs Ollama and pulls the
+right model for your RAM.
 
 After it finishes, fully quit Claude Desktop and reopen — `memcon` is
 already wired in.
@@ -110,7 +115,8 @@ Overrides (set as env vars before the one-liner):
 | Var | What |
 |---|---|
 | `MEMCON_DIR` | Custom install path (default `~/memcon`) |
-| `MEMCON_MODEL` | Force a specific Ollama model (skips the RAM-auto-pick) |
+| `MEMCON_WITH_OLLAMA=1` | Also install a local LLM (default: lean, no Ollama) |
+| `MEMCON_MODEL` | With Ollama on: force a specific model (skips the RAM-auto-pick) |
 | `MEMCON_SKIP_MCP=1` | Skip Claude Desktop registration |
 | `MEMCON_REF` | Branch / tag (default `main`) |
 
@@ -133,8 +139,9 @@ docker compose -f docker-compose.full.yml up -d --build
 open http://localhost:8000/ui
 ```
 
-Runs Qdrant + the API + the vault watcher as containers. You still need
-Ollama on the host (Memcon reaches it via `host.docker.internal`).
+Runs Qdrant + the API + the vault watcher as containers. No local LLM needed;
+for optional offline LLM features, run Ollama on the host (Memcon reaches it
+via `host.docker.internal`).
 
 ### Manual (macOS)
 
@@ -420,7 +427,7 @@ memcon/
 |---|---|---|
 | Vector DB | Qdrant (Docker) | Best local vector DB, free, persistent |
 | Embeddings | all-MiniLM-L6-v2 | 384-dim, ~90MB, no API needed |
-| Local LLM | Ollama + Qwen2.5-Coder | Free, runs on Apple Silicon / CUDA / CPU |
+| Local LLM *(optional)* | Ollama + Qwen2.5-Coder | Opt-in; Claude reasons by default |
 | API | FastAPI + uvicorn | Async, auto OpenAPI docs |
 | Notes | Obsidian → `vault/` | Best local markdown app |
 | Watcher | Python watchdog | Auto-ingest on save |
@@ -449,11 +456,13 @@ memory:
   embedding_model: "all-MiniLM-L6-v2"
   vector_dim: 384
 
-llm:
-  provider: "ollama"
-  model: "qwen2.5-coder:7b"  # auto-set by install.sh
+llm:                          # OPTIONAL — memcon works without a local LLM
+  provider: "ollama"          # "none" to force the lean (no-LLM) path
+  enabled: true               # auto-detected: present Ollama used, absent one degrades
+  model: "qwen2.5-coder:7b"   # only with Ollama (auto-set by MEMCON_WITH_OLLAMA install)
   base_url: "http://localhost:11434/v1"
   max_tokens: 1024
+  timeout: 90
 
 qdrant:
   host: "localhost"

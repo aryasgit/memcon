@@ -9,8 +9,8 @@
 # What it does:
 #   1. Confirms with you before doing anything.
 #   2. Downloads the canonical bootstrap script from GitHub.
-#   3. Runs it (clones the repo, installs deps, pulls Ollama model, starts
-#      Qdrant, ingests starter vault, registers MCP in Claude Desktop).
+#   3. Runs it (clones the repo, installs deps, starts Qdrant, ingests the
+#      starter vault, registers MCP in Claude Desktop). A local LLM is optional.
 #
 # You can read the bootstrap script before running it:
 #   https://github.com/aryasgit/memcon/blob/main/bootstrap.sh
@@ -42,12 +42,15 @@ echo ""
 echo "This will:"
 echo "  1. Clone Memcon into ~/memcon"
 echo "  2. Create a Python venv and install dependencies"
-echo "  3. Pull the right Ollama model for your RAM (1B → 32B)"
-echo "  4. Start Qdrant in Docker"
-echo "  5. Ingest the starter vault"
-echo "  6. Register Memcon in Claude Desktop's config"
+echo "  3. Start Qdrant in Docker"
+echo "  4. Ingest the starter vault"
+echo "  5. Register Memcon in Claude Desktop's config"
 echo ""
-echo "Requires: git, docker, python3, ollama. The installer will warn if any are missing."
+echo "Lean by default — Claude does the reasoning, no local LLM needed. Want a"
+echo "fully-offline local LLM too? Re-run with:"
+echo "  MEMCON_WITH_OLLAMA=1 bash memcon-install.command"
+echo ""
+echo "Requires: git, docker, python3 (a local LLM is optional). The installer warns if any are missing."
 echo ""
 echo "Read the source first if you want:"
 echo "  https://github.com/aryasgit/memcon/blob/main/bootstrap.sh"

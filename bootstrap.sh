@@ -6,10 +6,11 @@
 #   curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash
 #
 # Environment overrides:
-#   MEMCON_DIR    Target directory (default: ~/memcon)
-#   MEMCON_REPO   Repo URL        (default: https://github.com/aryasgit/memcon.git)
-#   MEMCON_REF    Branch / tag    (default: main)
-#   MEMCON_MODEL  Override the RAM-auto model pick (e.g. "qwen2.5-coder:14b")
+#   MEMCON_DIR          Target directory (default: ~/memcon)
+#   MEMCON_REPO         Repo URL        (default: https://github.com/aryasgit/memcon.git)
+#   MEMCON_REF          Branch / tag    (default: main)
+#   MEMCON_WITH_OLLAMA  Set to 1 to also install a local LLM (default: lean, no Ollama)
+#   MEMCON_MODEL        With Ollama on: override the RAM-auto model pick (e.g. "qwen2.5-coder:14b")
 #
 set -euo pipefail
 
