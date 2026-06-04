@@ -98,6 +98,14 @@ else
     gitpython rich openai pyyaml mcp
 fi
 
+# ── PRE-CACHE THE EMBEDDING MODEL ─────────
+# ~90MB, one-time. Doing it now (while the user expects to wait) means the FIRST
+# write/recall is never cold — otherwise it downloads on first use and can stall
+# the MCP call for minutes on a throttled connection (the cold-start hang).
+echo "📥 Caching the embedding model (~90MB, one-time)..."
+python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" \
+  || echo "   ⚠️  couldn't pre-cache the model — it will download on first use"
+
 # ── REGISTER MCP IN CLAUDE DESKTOP (EARLY — before anything fragile) ──
 # This MUST run before the service steps below. Registration only needs the
 # venv + server.py — never Docker/Qdrant/Ollama. Previously it ran LAST, so a

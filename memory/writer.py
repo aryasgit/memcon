@@ -70,6 +70,17 @@ def _find_related(
     vault) returns []. The threshold is what stops a sparse vault from wiring
     every note to every other note.
     """
+    # Never block a write on a COLD embedding model. On a fresh install the first
+    # embed() downloads the ~90MB model from HuggingFace, which can stall the MCP
+    # stdio path for minutes (the cold-start hang). If the model isn't warm yet,
+    # skip related links — the note still saves INSTANTLY with full content, and
+    # links fill in on a later write once the background prewarm has loaded it.
+    try:
+        from ingestion.embedder import is_loaded
+        if not is_loaded():
+            return []
+    except Exception:
+        return []
     try:
         from memory.retrieve import query_semantic
         results = query_semantic(query_text, top_k=top_k)

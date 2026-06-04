@@ -81,6 +81,10 @@ IF EXIST requirements.txt (
     gitpython rich openai pyyaml mcp
 )
 
+REM ── PRE-CACHE THE EMBEDDING MODEL (~90MB, one-time) ─
+echo Caching the embedding model (~90MB, one-time)...
+python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
 REM ── WRITE MODEL INTO CONFIG (only with a local LLM) ─
 IF "%WITH_OLLAMA%"=="1" (
   python -c "import re; p='memcon.config.yaml'; s=open(p).read(); s=re.sub(r'(?m)^  provider: \".*\"', '  provider: \"ollama\"', s); s=re.sub(r'(?m)^  model: \".*\"', '  model: \"%MODEL%\"', s); open(p,'w').write(s)"

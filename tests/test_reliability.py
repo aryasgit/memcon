@@ -296,3 +296,18 @@ def test_api_ask_degrades_to_chunks_without_llm(monkeypatch):
     out = A.ask(A.AskRequest(question="anything"))
     assert out["answer"] is None and out["raw_chunks"], "lean ask must return chunks for the caller"
     assert "No local LLM" in out["note"]
+
+
+# ── Cold-start: a write must never block on a cold embedding model ────────
+def test_find_related_skips_when_model_is_cold(monkeypatch):
+    import ingestion.embedder as emb
+    import memory.writer as writer
+    monkeypatch.setattr(emb, "_model", None)   # simulate a fresh, un-downloaded model
+
+    def explode(*a, **k):
+        raise AssertionError("find_related must NOT embed/load the model on the write path when cold")
+
+    monkeypatch.setattr(emb, "embed", explode)
+    monkeypatch.setattr(emb, "get_model", explode)
+    # Must return [] immediately without touching the model (no hang, no download).
+    assert writer._find_related("some query text about servos", exclude_doc="x") == []

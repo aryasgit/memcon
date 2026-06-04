@@ -661,6 +661,16 @@ def main() -> None:
     # blocking the server from coming up. The index stops silently drifting.
     import threading
 
+    def _bg_prewarm():
+        # Warm (or first-run DOWNLOAD) the embedding model in the background so the
+        # first write never pays it on the stdio path. find_related skips related
+        # links until this finishes, so writes stay instant either way.
+        try:
+            from ingestion.embedder import get_model
+            get_model()
+        except Exception:
+            pass
+
     def _bg_reindex():
         try:
             from ingestion.ingest import sync_index
@@ -668,6 +678,7 @@ def main() -> None:
         except Exception:
             pass
 
+    threading.Thread(target=_bg_prewarm, daemon=True, name="memcon-startup-prewarm").start()
     threading.Thread(target=_bg_reindex, daemon=True, name="memcon-startup-reindex").start()
     mcp.run()  # stdio transport by default
 

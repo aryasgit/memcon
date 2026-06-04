@@ -6,6 +6,13 @@ from config import cfg
 _model = None
 _model_lock = threading.Lock()
 
+def is_loaded() -> bool:
+    """True if the embedding model is already in memory. Latency-sensitive paths
+    (note writes) use this to embed only when WARM and skip gracefully when cold —
+    instead of blocking on a multi-second load or, on a fresh install, the ~90MB
+    first-run model DOWNLOAD from HuggingFace."""
+    return _model is not None
+
 def get_model():
     # Double-checked locking: under the bulk-import burst the watcher thread and
     # the writer's first ingest can both see `_model is None` and load the
