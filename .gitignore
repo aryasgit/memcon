@@ -9,6 +9,9 @@ __pycache__/
 .claude/
 tmp/
 
+# internal status / handoff doc — not for the public repo
+MEMCON_STATUS.md
+
 # Obsidian workspace state — personal, don't commit
 vault/.obsidian/
 vault/Untitled.*

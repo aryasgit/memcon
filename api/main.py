@@ -18,7 +18,29 @@ load_dotenv()
 VAULT_ROOT = Path(cfg('vault', 'path')).resolve()
 SKIP_DIRS = set(cfg('vault', 'skip_dirs') or [])
 
-app = FastAPI(title="Memcon API")
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def _lifespan(_app):
+    # Startup: ensure the collection exists and pre-warm the embedding model in
+    # the background so the first /query or /ask doesn't pay the one-time load.
+    try:
+        ensure_collection()
+    except Exception:
+        pass
+
+    def _warm():
+        try:
+            from ingestion.embedder import get_model
+            get_model()
+        except Exception:
+            pass
+    threading.Thread(target=_warm, daemon=True, name="memcon-api-warm").start()
+    yield
+
+
+app = FastAPI(title="Memcon API", lifespan=_lifespan)
 try:
     _LLM_TIMEOUT = float(cfg('llm', 'timeout'))
 except Exception:
@@ -141,19 +163,7 @@ def _vault_safe(path_str: str) -> Path:
     return candidate
 
 
-@app.on_event("startup")
-def startup():
-    ensure_collection()
-    # Pre-warm the embedding model in the BACKGROUND so the first /query or /ask
-    # doesn't pay the one-time model-load latency inside a request (and the model
-    # loads exactly once). Never blocks startup.
-    def _warm():
-        try:
-            from ingestion.embedder import get_model
-            get_model()
-        except Exception:
-            pass
-    threading.Thread(target=_warm, daemon=True, name="memcon-api-warm").start()
+# (startup logic now lives in the _lifespan handler near the top of this file)
 
 # ── REQUEST MODELS ────────────────────────────────────────
 # Every string field is length-bounded and every numeric field range-bounded, so
