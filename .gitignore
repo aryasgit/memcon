@@ -1,6 +1,7 @@
 .venv/
 qdrant_storage/
 .env
+memcon.config.local.yaml   # per-machine vault path / overrides — never commit
 __pycache__/
 *.pyc
 .DS_Store
