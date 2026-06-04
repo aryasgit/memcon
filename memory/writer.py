@@ -502,9 +502,24 @@ def summarise_session(summary: str, subsystem: str = "unknown") -> str:
 # Update existing note
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _ensure_in_vault(filepath: str) -> Path:
+    """Resolve `filepath` and confine it to the vault. Accepts absolute paths (as
+    log_universal returns) or vault-relative ones. Raises ValueError on traversal
+    so no caller — the MCP memcon_update_note tool or the HTTP /memory/update
+    endpoint — can append to a file outside the vault."""
+    p = Path(filepath)
+    candidate = (p if p.is_absolute() else (VAULT / p)).resolve()
+    try:
+        candidate.relative_to(VAULT.resolve())
+    except ValueError:
+        raise ValueError(f"refusing to write outside the vault: {filepath}")
+    return candidate
+
+
 def update_note(filepath: str, new_content: str) -> str:
-    """Append new findings to an existing note and re-ingest."""
-    path = Path(filepath)
+    """Append new findings to an existing note and re-ingest. The target is
+    confined to the vault — path-traversal writes are refused."""
+    path = _ensure_in_vault(filepath)
     if not path.exists():
         raise FileNotFoundError(f"Note not found: {filepath}")
     with open(path, 'a') as f:

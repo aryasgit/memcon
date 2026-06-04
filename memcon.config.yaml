@@ -25,8 +25,12 @@ qdrant:
   port: 6333
 
 api:
-  host: "0.0.0.0"
+  host: "127.0.0.1"               # localhost only — never expose memory on the network
   port: 8000
+  rate_limit_per_min: 300         # per-client cap across ALL routes
+  write_rate_limit_per_min: 60    # stricter cap on write / LLM / ingest routes
+  max_body_bytes: 1000000         # reject request bodies larger than ~1 MB (413)
+  allowed_hosts: ["localhost", "127.0.0.1"]   # Host-header allowlist (anti DNS-rebinding)
 
 # subsystems — a soft constraint on the `subsystem` field in note frontmatter.
 # Used by memcon_capture as a hint to the LLM (it tries to pick from this

@@ -26,3 +26,10 @@ vault/.memcon/
 
 # Migration backups
 vault/_backup_v3.1*/
+
+# Personal memory is PRIVATE — never commit real notes to the public repo. The
+# repo ships only note templates + a couple of curated example notes. (Full fix:
+# relocate the live vault out of the repo entirely — task #56.)
+vault/**/*.md
+!vault/_templates/**
+!vault/debugging/claude_desktop_mcp_wired_up.md
