@@ -587,6 +587,61 @@
   ::-webkit-scrollbar-track{background:transparent}
   ::-webkit-scrollbar-thumb{background:var(--line-3);border-radius:4px}
   ::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+
+  /* ─────────── PHONE: smaller type + tighter spacing ─────────── */
+  @media(max-width:640px){
+    body{font-size:14px}
+    .wrap{padding:0 1.15rem}
+    section{padding:3.25rem 0}
+    .sec-head{margin-bottom:1.6rem}
+    .sec-head h2{font-size:1.9rem;max-width:none}
+
+    .brand{font-size:2rem}
+    .nav{padding:1.1rem 0}
+    .nav-cta{padding:.5rem 1.1rem;font-size:.9rem}
+
+    .philo{padding:1.5rem 0;gap:1rem}
+
+    .hero{padding:2.3rem 0 2.5rem}
+    .hero h1{font-size:clamp(2rem,10.5vw,2.9rem);letter-spacing:-.04em}
+    .hero-foot{padding-top:1.7rem;gap:1.5rem}
+    .hero-thumb .term{font-size:.58rem;padding:.85rem .95rem;gap:.2rem;line-height:1.5}
+    .hero-aux{font-size:.88rem}
+    .start-row .startbox span{font-size:.95rem}
+
+    .marq{padding:.8rem 0}
+    .marq .lane{font-size:.8rem;gap:2.5rem}
+
+    .loop .step .top{padding:1.05rem 0}
+    .loop .step .n{font-size:1.5rem}
+
+    .stats{gap:1rem}
+    .stat{padding-top:1rem}
+    .stat .big{font-size:2rem}
+
+    .wall .tool{padding:1rem .8rem 1.05rem}
+    .wall .tool .nm{font-size:.78rem}
+    .wall-info .nm{font-size:1rem}
+
+    .ide{font-size:.68rem}
+    .editor-side .pt{grid-template-columns:40px 1fr;gap:.9rem;padding:1.05rem 0}
+    .editor-side .pt .kbd{width:40px;height:40px}
+
+    .install-left h3{font-size:1.5rem}
+    .term-row{font-size:.72rem;padding:.8rem .85rem;gap:.5rem}
+    .term-row .copy{padding:.4rem .7rem;font-size:.66rem}
+
+    .quote{padding:3.25rem 0}
+    .quote h2{font-size:1.95rem;max-width:none}
+    .quote .sig{margin-top:1.4rem}
+
+    footer{padding:2.5rem 0 1.25rem}
+    .foot-grid{gap:1.5rem;margin-bottom:2.25rem}
+    .wordmark{margin:.4rem 0 1.1rem}
+    .wordmark .w{font-size:clamp(2.6rem,17vw,4.5rem)}
+    .foot-bar{font-size:.7rem;gap:.6rem}
+    .foot-bar a{margin-left:1rem}
+  }
 </style>
 </head>
 <body>
