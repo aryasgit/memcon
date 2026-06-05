@@ -129,10 +129,21 @@ async function ask(): Promise<void> {
                     body: JSON.stringify({ question: q, top_k: getTopK() }),
                 }, token);
                 const sources = (d.sources || []).join(", ") || "—";
+                // Lean mode: /ask returns no prose answer (answer: null) — render the
+                // grounding chunks directly so Ask still surfaces your memory.
+                let body: string;
+                if (d.answer) {
+                    body = d.answer;
+                } else {
+                    const chunks: any[] = d.raw_chunks || [];
+                    body = (d.note ? `_${d.note}_\n\n` : "") + (chunks.length
+                        ? chunks.map((c) => `### ${c.doc_name || "note"} · score ${c.score}\n${c.text || ""}`).join("\n\n")
+                        : "(no answer)");
+                }
                 const content = [
                     `# ${q}`,
                     "",
-                    d.answer || "(no answer)",
+                    body,
                     "",
                     "---",
                     `**Sources** · ${sources}`,

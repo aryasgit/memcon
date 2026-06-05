@@ -878,7 +878,7 @@ async function doSubmit(){
         body:JSON.stringify({question:q, top_k:5, subsystem:activeSub})
       });
       var d = await r.json();
-      pending.text    = d.answer || '(no answer)';
+      pending.text    = d.answer || d.note || '(no answer)';
       pending.sources = d.sources || [];
       pending.chunks  = d.raw_chunks || [];
       pending.chunksUsed = d.chunks_used || 0;

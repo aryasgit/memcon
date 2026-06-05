@@ -7,10 +7,12 @@
 #   $env:MEMCON_DIR    Target directory (default: $HOME\memcon)
 #   $env:MEMCON_REPO   Repo URL        (default: https://github.com/aryasgit/memcon.git)
 #   $env:MEMCON_REF    Branch / tag    (default: main)
-#   $env:MEMCON_MODEL  Force a specific Ollama model
+#   $env:MEMCON_WITH_OLLAMA=1  Also install a local LLM (default: lean, no Ollama)
+#   $env:MEMCON_MODEL  With Ollama on: force a specific model (skips the RAM auto-pick)
 #   $env:MEMCON_SKIP_MCP=1  Skip Claude Desktop registration
 #
-# Requirements: git, python (3.10+), Docker Desktop, Ollama.
+# Requirements: git, python (3.10+), Docker Desktop. Ollama is optional —
+# installed only when $env:MEMCON_WITH_OLLAMA=1 (default is lean: Claude reasons).
 $ErrorActionPreference = "Stop"
 
 $Repo   = if ($env:MEMCON_REPO) { $env:MEMCON_REPO } else { "https://github.com/aryasgit/memcon.git" }

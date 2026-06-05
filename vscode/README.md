@@ -36,7 +36,7 @@ natively).
 cd vscode
 npm install
 npm run compile
-npx vsce package --no-dependencies
+npx @vscode/vsce package --no-dependencies
 # → produces memcon-vscode-0.1.0.vsix
 ```
 
@@ -90,8 +90,8 @@ Planned for v0.2:
 - Code lens on functions: *"3 related debug sessions, 2 decisions"*
 - Hover provider: top-1 related note shown when hovering a symbol
 - Status bar widget: *"last memcon write: 12 min ago"*
-- Direct `memcon_capture` integration (full natural-language save with
-  local-LLM extraction, not just session-summary)
+- Direct `memcon_capture` integration (full natural-language save —
+  Claude- or optional-local-LLM-structured, not just session-summary)
 
 See the main [Memcon ROADMAP](../ROADMAP.md) for the bigger picture.
 

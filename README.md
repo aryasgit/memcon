@@ -68,9 +68,10 @@ cost, zero hosting.** The installer wires it into Claude Desktop for you;
 restart Claude and suddenly it has reliable long-term memory of your project.
 
 **Low-friction writes:** you don't have to spell out every field. Tell
-Claude *"save this as a debugging session"* and `memcon_capture` invokes the
-local LLM to extract title / symptom / cause / fix / subsystem / tags from
-context, then writes the structured note.
+Claude *"save this as a debugging session"* and `memcon_capture` saves a note
+from your text instantly. In the default lean mode **Claude** supplies the
+structure (title / symptom / cause / fix / subsystem / tags); with the optional
+local LLM (`MEMCON_WITH_OLLAMA=1`) memcon auto-extracts those fields itself.
 
 **Self-organising vault:** every new note auto-gets an `## Related` section
 with Obsidian `[[wikilinks]]` to the top-3 semantically similar notes — so
@@ -193,7 +194,8 @@ If you installed manually (or want to wire other clients):
      "mcpServers": {
        "memcon": {
          "command": "/ABSOLUTE/PATH/TO/memcon/.venv/bin/python3",
-         "args": ["/ABSOLUTE/PATH/TO/memcon/memcon_mcp/server.py"]
+         "args": ["/ABSOLUTE/PATH/TO/memcon/memcon_mcp/server.py"],
+         "cwd": "/ABSOLUTE/PATH/TO/memcon"
        }
      }
    }
@@ -206,7 +208,9 @@ If you installed manually (or want to wire other clients):
    > Claude Desktop on macOS sandboxes the MCP subprocess with `cwd=/` and
    > strips `PYTHONPATH`, so `-m` can't find the `memcon_mcp` package.
    > Running `server.py` by absolute path puts the script's directory on
-   > `sys.path` automatically and works under the sandbox.
+   > `sys.path` automatically and works under the sandbox. The `cwd` field
+   > pins the working dir to the repo so `.env` and any relative paths
+   > resolve against the project root, not `/`.
 
 4. Fully quit Claude Desktop (`Cmd+Q` / right-click tray → Quit), reopen.
 5. Ask Claude *"use memcon to check what we know about servo overheating."*
@@ -238,10 +242,11 @@ paste this into Claude's project memory / system prompt:
 > "save this", "log this", "save the debugging session", "log my decision",
 > "remember this experiment", "session summary" — **always reach for
 > `memcon_capture`**. Summarise the recent conversation into the `text`
-> argument; the local LLM running inside memcon will extract title /
-> symptom / cause / fix (or decision / reasoning, etc.) automatically. Only
-> use `memcon_write_debug` / `_decision` / `_experiment` when the user
-> explicitly provides pre-structured fields.
+> argument — structured as title / symptom / cause / fix (or decision /
+> reasoning, etc.) — and memcon saves it instantly. (With the optional local
+> LLM enabled, memcon also auto-extracts those fields on its own.) Reach for
+> `memcon_write_debug` / `_decision` / `_experiment` when you already have
+> pre-structured fields.
 >
 > At the end of a working session, call `memcon_session_summary` (or
 > `memcon_capture` with `hint="session"`). Do not invent project details
@@ -308,6 +313,10 @@ memcon serve                # start API + watcher (= ./start.sh)
 memcon ui                   # open the dashboard in your browser
 ```
 
+> `ask` and `digest` compose a prose answer only with the optional local LLM;
+> in lean mode they return the grounding memory chunks instead (Claude writes
+> the prose).
+
 ## Multi-project switching
 
 One Memcon install can back N projects via environment variables:
@@ -359,9 +368,11 @@ warning.
 
 ---
 
-## Hardware → model auto-pick
+## Hardware → model auto-pick (only with `MEMCON_WITH_OLLAMA=1`)
 
-`install.sh` detects RAM and writes the right model into `memcon.config.yaml`:
+When you opt into a local LLM, `install.sh` detects RAM and writes the right
+Ollama model into `memcon.config.yaml`. The default lean install skips this
+entirely — Claude does the reasoning, so no model is pulled:
 
 | RAM | Model | Notes |
 |---|---|---|
@@ -383,7 +394,7 @@ memcon/
 ├── config.py                  ← yaml loader
 │
 ├── memcon_mcp/                ← MCP server (the headline)
-│   ├── server.py              ← 9 tools over stdio
+│   ├── server.py              ← 19 tools over stdio
 │   └── README.md              ← per-client setup
 │
 ├── api/
@@ -515,7 +526,7 @@ Base: `http://localhost:8000`
 | GET | `/memory/recent?limit=10` | latest notes |
 | GET | `/memory/note?path=...` | raw markdown of a note |
 | POST | `/query` | semantic search (raw chunks) |
-| POST | `/ask` | RAG answer (LLM grounded in memory) |
+| POST | `/ask` | RAG answer if a local LLM is set; grounding chunks otherwise |
 | POST | `/ingest` | manually ingest a file |
 | POST | `/memory/debug` | write a debug note |
 | POST | `/memory/decision` | write a decision |
@@ -572,7 +583,8 @@ Most common causes:
 By default Claude Desktop doesn't know that `memcon_capture` is the right
 tool for loose, short save commands. Add the auto-triggering prompt above
 to Claude's project memory. After that, any of these phrases will route
-through `memcon_capture` and the local LLM will structure them:
+through `memcon_capture` — Claude structures the note (or, with the optional
+local LLM, memcon auto-extracts the fields):
 - "save this" / "save it" / "log this"
 - "save the debugging session" / "log my decision" / "remember this experiment"
 - "session summary" / "save today's session"
@@ -622,7 +634,7 @@ Feature-keyed (not date-keyed). See **[ROADMAP.md](ROADMAP.md)** for the full pl
 
 - **v1.0** *Plug into Claude* — ✅ shipped (MCP server, 9 tools, one-liner install)
 - **v2.0** *Memory absorbs everything* — ✅ shipped (code/PDF/git ingestion, CLI, multi-project, 12 tools)
-- **v3.0** *Lives in your editor* — 🚧 next (VS Code/Cursor extension with inline memory queries)
+- **v3.0** *Lives in your editor* — ✅ shipping (VS Code/Cursor extension — pre-built VSIX in the repo & on the landing page)
 - **v4.0** *Knows what it knows* — contradiction detection, knowledge graph viewer, pattern surfacing
 - **v5.0** *Multimodal & shared* — image/voice/web ingestion, team vaults
 - **v6.0+** *Managed option, niche depth* — hosted tier, ROS bags, plugin SDK

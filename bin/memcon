@@ -46,7 +46,7 @@ case "$cmd" in
     curl -fsS -X POST "$API/ask" \
       -H "Content-Type: application/json" \
       -d "{\"question\": $(printf '%s' "$q" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}" \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('answer','(no answer)')); print(); print('sources:', ', '.join(d.get('sources',[])), '·', d.get('chunks_used',0),'chunks')"
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('answer') or d.get('note') or '(no answer)'); print(); print('sources:', ', '.join(d.get('sources',[])), '·', d.get('chunks_used',0),'chunks')"
     ;;
   query|search)
     require_api
@@ -92,7 +92,7 @@ for n in d.get('notes', []):
     curl -fsS -X POST "$API/ask" \
       -H "Content-Type: application/json" \
       -d "{\"question\": \"Give me a digest of what's happened in the last $days days. Themes, wins, open items, worth revisiting. Be concise.\", \"top_k\": 25}" \
-      | python3 -c "import json,sys; print(json.load(sys.stdin).get('answer','(no answer)'))"
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('answer') or d.get('note') or '(no answer)')"
     ;;
   save|capture)
     require_api
