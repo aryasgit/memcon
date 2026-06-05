@@ -590,6 +590,11 @@
 
   /* ─────────── PHONE: smaller type + tighter spacing ─────────── */
   @media(max-width:640px){
+    /* phone: strip install + gimmicks, kill horizontal overflow, keep the gist */
+    html,body{overflow-x:hidden}
+    .crosshair,.marq,.nav-cta,#install,#tools,.wordmark{display:none}
+    .start-row a[href="#install"],.start-row a[download]{display:none}
+
     body{font-size:14px}
     .wrap{padding:0 1.15rem}
     section{padding:3.25rem 0}
