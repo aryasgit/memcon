@@ -6,7 +6,7 @@ import git
 from ingestion.embedder import embed
 from memory.qdrant_store import ensure_collection, upsert_chunks
 
-REPO_PATH = os.getenv("BARQ_REPO", "../quadruped")
+REPO_PATH = os.getenv("MEMCON_CODE_DIR") or os.getenv("BARQ_REPO") or "."
 ensure_collection()
 
 try:

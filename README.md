@@ -37,11 +37,11 @@ vault grows itself while you work. Nothing leaves your machine.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  You: "Why is the RR wrist servo overheating again?"         │
+│  You: "Why are requests failing under burst load again?"     │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
-      Claude calls memcon_query("RR wrist servo overheating")
+      Claude calls memcon_query("requests failing under burst load")
                               │
                               ▼
    Memcon embeds the query, looks up the top-5 most similar
@@ -53,7 +53,7 @@ vault grows itself while you work. Nothing leaves your machine.
                               │
                               ▼
       You confirm the fix. Claude calls memcon_write_debug(
-         title, symptom, cause, fix, subsystem="servo")
+         title, symptom, cause, fix, subsystem="cache")
                               │
                               ▼
    A new markdown note lands in vault/debugging/. The Obsidian
@@ -213,7 +213,7 @@ If you installed manually (or want to wire other clients):
    > resolve against the project root, not `/`.
 
 4. Fully quit Claude Desktop (`Cmd+Q` / right-click tray → Quit), reopen.
-5. Ask Claude *"use memcon to check what we know about servo overheating."*
+5. Ask Claude *"use memcon to check what we know about the Redis pool exhaustion."*
 
 Or just re-run the auto-registrar instead of editing JSON by hand:
 ```bash
@@ -303,7 +303,7 @@ See [vscode/README.md](vscode/README.md) for the full extension docs.
 `PATH` and you can run from any directory:
 
 ```bash
-memcon ask    "what caused the servo to overheat?"
+memcon ask    "why did the Redis connection pool get exhausted?"
 memcon query  "imu calibration"
 memcon recent
 memcon stats
@@ -452,9 +452,9 @@ Everything in one file: `memcon.config.yaml`
 
 ```yaml
 project:
-  name: "BARQ"               # change for your project
+  name: "your-project"       # change for your project
   description: "..."
-  domain: "robotics"
+  domain: "software"
 
 vault:
   path: "./vault"
@@ -479,7 +479,7 @@ qdrant:
   host: "localhost"
   port: 6333
 
-subsystems: [servo, imu, gait, power, vision, voice, slam, ik, version_control]
+subsystems: [api, auth, database, cache, events, frontend, infra, version_control]
 memory_types: [episodic, semantic, procedural, causal]
 ```
 
@@ -493,21 +493,21 @@ you want to:
 ```markdown
 ---
 memory_type: episodic
-subsystem: servo
-tags: [overheating, rr_wrist]
+subsystem: cache
+tags: [redis, connection-pool, latency]
 date: 2026-05-26
 ---
 
-# RR Wrist Servo Overheating
+# Redis Connection Pool Exhausted Under Burst Load
 
 ## Symptom
-Overheats during backward gait, snaps to default angle.
+Under traffic spikes, requests fail with "max number of clients reached" and p99 climbs to ~4s.
 
 ## Cause
-Unequal static load distribution.
+Pool size was 10; each request held a connection for a slow Lua script.
 
 ## Fix
-Paper-slip foot contact test + IMU roll/pitch logging.
+Raised the pool to 50 and moved the Lua script off the request hot path. p99 → ~220ms.
 ```
 
 Drop it anywhere in `vault/`. The watcher picks it up, embeds it, stores it.
@@ -538,7 +538,7 @@ Base: `http://localhost:8000`
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "What caused the servo to overheat?", "top_k": 5}'
+  -d '{"question": "Why did the Redis connection pool get exhausted?", "top_k": 5}'
 ```
 
 ---

@@ -9,7 +9,7 @@ upserts a single chunk.
 Usage:
     python3 scripts/ingest_latest_commit.py [REPO_PATH]
 
-REPO_PATH defaults to $MEMCON_CODE_DIR, then $BARQ_REPO, then $(pwd).
+REPO_PATH defaults to $MEMCON_CODE_DIR, then $(pwd).
 """
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 project:
-  name: "BARQ"
-  description: "Autonomous quadruped robot"
-  domain: "robotics"
+  name: "your-project"          # change to your project's name
+  description: "What you're building"
+  domain: "software"            # e.g. software, robotics, research, hardware
 
 vault:
   path: "./vault"
@@ -43,16 +43,16 @@ api:
 # subsystems — a soft constraint on the `subsystem` field in note frontmatter.
 # Used by memcon_capture as a hint to the LLM (it tries to pick from this
 # list). Leave empty `[]` to accept any free-form string. Add the buckets
-# that make sense for your domain — these are BARQ's.
+# that make sense for your domain. These mirror the bundled sample dataset —
+# swap in your own (or leave [] to accept any free-form string).
 subsystems:
-  - servo
-  - imu
-  - gait
-  - power
-  - vision
-  - voice
-  - slam
-  - ik
+  - api
+  - auth
+  - database
+  - cache
+  - events
+  - frontend
+  - infra
   - version_control
 
 # memory_types — legacy taxonomy kept for back-compat. The new `type` field

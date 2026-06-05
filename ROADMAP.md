@@ -173,9 +173,9 @@ Beyond text. Multiple humans + multiple senses.
       pages, blog posts to memcon with one click
 - [ ] **Team vaults** — shared memory across an engineering team with
       privacy boundaries (some notes personal, some shared)
-- [ ] **Mentions in notes** — `@servo` to tag a subsystem, `@aryaman` to
+- [ ] **Mentions in notes** — `@auth` to tag a subsystem, `@alex` to
       tag a person; mentions index for cross-references
-- [ ] **Vault sync** — laptop ↔ robot ↔ workstation share the same vault
+- [ ] **Vault sync** — laptop ↔ desktop ↔ server share the same vault
       via a chosen transport (Syncthing / iCloud / Dropbox / custom)
 - [ ] **Mobile read-only app** — query memory from your phone (mostly for
       "wait, what did we decide about X?" moments away from the desk)

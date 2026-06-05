@@ -110,7 +110,7 @@ async function showMarkdown(content: string, title?: string): Promise<void> {
 async function ask(): Promise<void> {
     const q = await vscode.window.showInputBox({
         prompt: "Ask Memcon",
-        placeHolder: "What caused the servo to overheat?",
+        placeHolder: "Why did the Redis connection pool get exhausted?",
         ignoreFocusOut: true,
     });
     if (!q || !q.trim()) return;
@@ -160,7 +160,7 @@ async function ask(): Promise<void> {
 async function search(): Promise<void> {
     const q = await vscode.window.showInputBox({
         prompt: "Memcon search (raw chunks)",
-        placeHolder: "imu calibration backward gait",
+        placeHolder: "jwt clock skew auth",
         ignoreFocusOut: true,
     });
     if (!q || !q.trim()) return;

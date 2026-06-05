@@ -93,9 +93,9 @@ def memcon_query(query: str, top_k: int = 5, subsystem: str | None = None) -> di
 
     Args:
         query: Natural-language description of the problem or topic
-               (e.g. "servo overheats during backward gait").
+               (e.g. "requests fail under burst load").
         top_k: How many top matches to return. Default 5.
-        subsystem: Optional filter (e.g. "servo", "imu", "gait").
+        subsystem: Optional filter (e.g. "api", "auth", "cache").
 
     Returns: { "results": [ {score, text, doc_name, subsystem, memory_type, tags}, ... ] }
 
@@ -198,7 +198,7 @@ def memcon_recall(problem: str, k: int = 5) -> dict:
 
     Args:
         problem: natural-language description of what's happening NOW
-                 (e.g. "RR servo overheating during backward gait again").
+                 (e.g. "Redis connection pool exhausted under load again").
         k: how many past matches to return. Default 5.
 
     Returns: { problem, summary,
@@ -226,7 +226,7 @@ def memcon_read(doc_name: str) -> dict:
 
     Args:
         doc_name: the note's doc_name / id from a query or recall result
-                  (e.g. "2026-06-05_rr_servo_brownout").
+                  (e.g. "2026-06-05_redis_pool_exhausted").
 
     Returns: { doc_name, path, content }  or  { error }.
     """
@@ -266,11 +266,11 @@ def memcon_write_debug(
     Save a debugging session with PRE-STRUCTURED fields. Use this only when
     you already have title/symptom/etc. cleanly separated (e.g. from a form
     or another tool). For natural-language user requests like "save this
-    debug session", prefer `memcon_capture` instead — it has the local LLM
-    do the field extraction for you.
+    debug session", prefer `memcon_capture` instead — Claude (or the optional
+    local LLM) structures the fields for you.
 
     Args:
-        title: Short descriptive title (e.g. "RR Wrist Overheating").
+        title: Short descriptive title (e.g. "Redis Pool Exhausted Under Load").
         symptom: What was observed.
         cause: Root cause if known.
         fix: What resolved it (or current workaround).
@@ -394,7 +394,7 @@ def memcon_timeline(since_days: int = 7, limit: int = 30, subsystem: str | None 
     Args:
         since_days: Look back this many days from now. Default 7.
         limit: Max number of notes to return. Default 30.
-        subsystem: Optional filter (e.g. "servo").
+        subsystem: Optional filter (e.g. "cache").
 
     Returns: { "notes": [{path, name, folder, mtime_iso, age_days}, ...],
                "since_days", "count" }

@@ -2,13 +2,13 @@
 """
 Index a source-code directory into Memcon.
 
-This makes semantic queries like "where is the IMU initialised?" or "find
-the gait phase continuity logic" return actual code, not just notes.
+This makes semantic queries like "where is the JWT validated?" or "find
+the rate-limit middleware" return actual code, not just notes.
 
 Usage:
     python3 scripts/ingest_code.py [PATH]
 
-PATH defaults to $MEMCON_CODE_DIR, then $BARQ_REPO, then ./ — the current
+PATH defaults to $MEMCON_CODE_DIR, then ./ — the current
 project directory. Respects a sensible exclusion list (.git, .venv,
 node_modules, __pycache__, build/dist/target, *.lock, binary blobs).
 

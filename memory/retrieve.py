@@ -3,7 +3,7 @@ memory/retrieve.py
 Hybrid retrieval: semantic (Qdrant) + entity (SQLite inverted index).
 
 Why hybrid: the vector store excels at "this is roughly about that," but is
-weak at "the note that mentions servo.cpp". The entity index complements it
+weak at "the note that mentions jwt.ts". The entity index complements it
 with exact-string recall — together you get both fuzzy and precise.
 
 Public entry points:
@@ -137,7 +137,7 @@ def query(text: str, top_k: int = 5, subsystem: str | None = None) -> list[dict]
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    q = " ".join(sys.argv[1:]) or "servo overheating"
+    q = " ".join(sys.argv[1:]) or "redis connection pool exhausted"
     results = query(q)
     for r in results:
         via = r.get("via", "semantic")

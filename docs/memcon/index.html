@@ -559,7 +559,7 @@
       linear-gradient(180deg, transparent 60%, rgba(0,0,0,.6));
   }
   .wordmark .cut::after{
-    content:"vault/debugging/rr_wrist_overheating.md\Aauto-linked → [[i2c_oserror]]\A         → [[gait_log_03]]";
+    content:"vault/debugging/redis_pool_exhausted.md\Aauto-linked → [[postgres_deadlock]]\A         → [[redis_pool_bench]]";
     white-space:pre;
     position:absolute;left:.7rem;bottom:.7rem;
     font-family:'JetBrains Mono',monospace;font-size:.55rem;
@@ -635,7 +635,7 @@
     <div class="r">
       <div>
         <span>Live on v3.0</span><br>
-        <span style="color:var(--faint)">Editor + 12 MCP tools</span>
+        <span style="color:var(--faint)">Editor + 19 MCP tools</span>
       </div>
       <span class="side-dot"></span>
     </div>
@@ -653,14 +653,14 @@
       <!-- "screenshot" terminal card -->
       <div class="hero-thumb">
         <div class="term">
-          <div><span class="pmpt">claude ›</span> why is the rr wrist servo overheating again?</div>
-          <div><span class="pmpt">mcp ›</span> <span class="out">memcon_query("rr wrist servo overheating")</span></div>
+          <div><span class="pmpt">claude ›</span> why are requests failing under burst load again?</div>
+          <div><span class="pmpt">mcp ›</span> <span class="out">memcon_query("requests failing under burst load")</span></div>
           <div><span class="pmpt">memcon ›</span> <span class="out">→ 5 chunks · last seen 11d ago</span></div>
-          <div><span class="pmpt">claude ›</span> <span class="out">last time the cause was vibration-loosened wiring</span></div>
-          <div><span class="pmpt">claude ›</span> <span class="out">causing a power brownout during backward gait.</span></div>
-          <div><span class="pmpt">claude ›</span> <span class="out">the fix was </span><span class="acc">tightening connectors</span><span class="out"> + redistribute load.</span></div>
+          <div><span class="pmpt">claude ›</span> <span class="out">last time the Redis connection pool was exhausted</span></div>
+          <div><span class="pmpt">claude ›</span> <span class="out">— pool size 10, held by a slow Lua script.</span></div>
+          <div><span class="pmpt">claude ›</span> <span class="out">the fix was </span><span class="acc">raising the pool to 50</span><span class="out"> + move it off the hot path.</span></div>
           <div><span class="pmpt">mcp ›</span> <span class="out">memcon_write_debug(...)</span></div>
-          <div><span class="pmpt">vault ›</span> <span class="out">+ debugging/rr_wrist_overheat_v2.md</span></div>
+          <div><span class="pmpt">vault ›</span> <span class="out">+ debugging/redis_pool_exhausted_v2.md</span></div>
         </div>
         <div class="scan"></div>
         <div class="stamp">vault.live · 2026</div>
@@ -744,7 +744,7 @@
         <div class="top">
           <div class="n">01</div>
           <div class="who">You<small>Human</small></div>
-          <div class="verb">"Why is the RR wrist servo overheating again?"</div>
+          <div class="verb">"Why are requests failing under burst load again?"</div>
           <div class="mcp">prompt</div>
           <div class="caret">+</div>
         </div>
@@ -755,7 +755,7 @@
           <div class="n">02</div>
           <div class="who">Claude<small>MCP call</small></div>
           <div class="verb">Reaches into your vault.</div>
-          <div class="mcp">memcon_query("rr wrist…")</div>
+          <div class="mcp">memcon_query("requests…")</div>
           <div class="caret">+</div>
         </div>
         <div class="body"><div class="body-inner"><div></div><div>Claude decides this question would benefit from prior context and invokes <span class="mono">memcon_query</span>. You didn't ask it to — it's listed as a tool, the model picks it up.</div></div></div>
@@ -768,7 +768,7 @@
           <div class="mcp">→ 5 chunks · 384d</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>sentence-transformers embeds the question, Qdrant returns the 5 nearest chunks from your vault. Embedding-keyed, not string-keyed — "weird motor error" still finds "servo torque loss."</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>sentence-transformers embeds the question, Qdrant returns the 5 nearest chunks from your vault. Embedding-keyed, not string-keyed — "requests dropping at peak" still finds "Redis pool exhausted."</div></div></div>
       </div>
       <div class="step" data-step="4">
         <div class="top">
@@ -778,7 +778,7 @@
           <div class="mcp">+ sources</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>"Last time, the cause was vibration-loosened wiring causing a power brownout during backward gait. The fix was tightening connectors and redistributing static load." — sourced from notes Claude can quote.</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>"Last time, the Redis connection pool (size 10) was exhausted by a slow Lua script holding connections. The fix was raising the pool to 50 and moving the script off the hot path." — sourced from notes Claude can quote.</div></div></div>
       </div>
       <div class="step" data-step="5">
         <div class="top">
@@ -798,7 +798,7 @@
           <div class="mcp">+ watcher reingest</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>Obsidian sees the file instantly via vault-watch. <span class="mono">watcher.py</span> re-ingests it into Qdrant. The next time anyone asks about wrist servos, this answer is part of memory.</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>Obsidian sees the file instantly via vault-watch. <span class="mono">watcher.py</span> re-ingests it into Qdrant. The next time anyone asks about pool exhaustion, this answer is part of memory.</div></div></div>
       </div>
     </div>
   </section>

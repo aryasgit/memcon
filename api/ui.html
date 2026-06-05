@@ -678,9 +678,9 @@ var subsystems = [];
 var msgs       = [];
 
 var STARTERS = [
-  { tag:'01 · DEBUG',     text:'What caused the servo to overheat?' },
-  { tag:'02 · DECISIONS', text:'Why did we switch from Anthropic API to Ollama?' },
-  { tag:'03 · HISTORY',   text:'Show me everything related to the IMU.' },
+  { tag:'01 · DEBUG',     text:'Why did the Redis connection pool get exhausted?' },
+  { tag:'02 · DECISIONS', text:'Why did we choose Postgres over MongoDB?' },
+  { tag:'03 · HISTORY',   text:'Show me everything related to auth.' },
   { tag:'04 · RECENT',    text:'Summarise the last week of work.' },
 ];
 
@@ -996,7 +996,7 @@ function renderWriteForm(){
   var t = writeType;
   if (t === 'debug'){
     f.innerHTML =
-      '<input class="wfield" id="w-title" placeholder="Title — e.g. RR Wrist Overheating"/>' +
+      '<input class="wfield" id="w-title" placeholder="Title — e.g. Redis pool exhausted under load"/>' +
       '<textarea class="wfield" id="w-symptom" placeholder="Symptom — what happened?"></textarea>' +
       '<textarea class="wfield" id="w-cause" placeholder="Cause (optional)"></textarea>' +
       '<textarea class="wfield" id="w-fix" placeholder="Fix applied (optional)"></textarea>' +

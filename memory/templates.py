@@ -219,7 +219,7 @@ def render_body(kind: str, title: str, fields: dict, sections: list | None = Non
 #
 # A new note starts from its kind's frozen skeleton, then INHERITS the
 # problem-specific sections that recur across its most-related past notes. So the
-# 3rd+ servo-thermal note auto-adopts "## Temperature curve" once earlier ones
+# 3rd+ latency-incident note auto-adopts "## Latency timeline" once earlier ones
 # share it — and similar problems end up structurally aligned, which is exactly
 # what makes memcon_recall able to line them up apples-to-apples.
 # ──────────────────────────────────────────────────────────────────────────────

@@ -118,7 +118,7 @@ def main() -> int:
     print(f"   {cfg_path}")
     print()
     print("   Quit Claude Desktop (Cmd+Q on macOS, right-click tray → Quit on Windows)")
-    print('   and reopen. Then ask Claude: "use memcon to find anything about servo overheating"')
+    print('   and reopen. Then ask Claude: "use memcon to find anything about the Redis pool exhaustion"')
     return 0
 
 

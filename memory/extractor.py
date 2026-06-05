@@ -231,8 +231,8 @@ CONTENT:
 # ──────────────────────────────────────────────────────────────────────────────
 
 ENTITY_CATEGORIES = (
-    "files",     # source files / paths mentioned, e.g. "drivers/servo.cpp"
-    "symbols",   # function / class / method names, e.g. "ServoController.set_torque"
+    "files",     # source files / paths mentioned, e.g. "src/auth/jwt.ts"
+    "symbols",   # function / class / method names, e.g. "AuthService.refresh_token"
     "errors",    # exception types / error codes / error messages
     "packages",  # external libraries / package names
     "urls",      # http(s) links

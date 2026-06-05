@@ -60,7 +60,7 @@ STEP 2 — CLASSIFY each segment into exactly one kind:
 STEP 3 — EXTRACT LITERALLY
 Fill fields ONLY with content that appears in the SOURCE. If a field isn't in the
 source, leave it empty — never invent file names, error codes, symbols, or
-details. Titles: short and specific ("RR wrist overheating", not "A bug").
+details. Titles: short and specific ("Redis pool exhausted under load", not "A bug").
 
 STEP 4 — AVOID DUPLICATES
 Before writing a node you MAY call memcon_query with its title. If a clearly

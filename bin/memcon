@@ -3,7 +3,7 @@
 # memcon — CLI for the local Memcon API.
 #
 # Usage:
-#   memcon ask "what caused the servo to overheat?"
+#   memcon ask "why did the Redis connection pool get exhausted?"
 #   memcon query "imu calibration" [--subsystem imu] [--top-k 5]
 #   memcon stats
 #   memcon recent [--limit 10]

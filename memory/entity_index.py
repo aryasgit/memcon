@@ -166,8 +166,8 @@ def _candidate_tokens(query: str) -> list[str]:
 
     We look for things engineers actually use in queries:
       - dotted-path tokens     (foo.bar.baz, file.cpp, file.ts)
-      - slashed paths          (src/auth/jwt.ts, drivers/servo.cpp)
-      - CamelCase / snake_case (ServoController, set_torque)
+      - slashed paths          (src/auth/jwt.ts, store/redis_pool.go)
+      - CamelCase / snake_case (AuthService, refresh_token)
       - quoted strings         ("I2C OSError")
       - http(s) URLs
       - error-code-shaped      (errno=121, OSError, E_ACCES)

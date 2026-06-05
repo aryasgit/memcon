@@ -31,16 +31,16 @@ No copy-paste. No manual note-taking. The vault grows itself while you work.
 ## How the loop works
 
 ```
-You: "Why is the RR wrist overheating?"
+You: "Why are requests failing under burst load?"
         ↓
-Claude calls memcon_query("RR wrist overheating servo")
+Claude calls memcon_query("requests failing under burst load")
         ↓
 Memcon returns top-5 chunks from past debug notes
         ↓
 Claude answers grounded in YOUR project history (not hallucinated)
         ↓
 After you confirm the fix:
-Claude calls memcon_write_debug(title, symptom, cause, fix, subsystem="servo")
+Claude calls memcon_write_debug(title, symptom, cause, fix, subsystem="cache")
         ↓
 New note saved into the Obsidian vault → re-ingested → searchable next session
 ```
@@ -72,7 +72,7 @@ entire vault. Cheap, fast, and keyed by meaning rather than exact string.
      "mcpServers": {
        "memcon": {
          "command": "/ABSOLUTE/PATH/TO/memcon/.venv/bin/python3",
-         "args": ["-m", "memcon_mcp.server"],
+         "args": ["/ABSOLUTE/PATH/TO/memcon/memcon_mcp/server.py"],
          "cwd": "/ABSOLUTE/PATH/TO/memcon"
        }
      }
@@ -84,7 +84,7 @@ entire vault. Cheap, fast, and keyed by meaning rather than exact string.
 
 4. Restart Claude Desktop. "memcon" should appear in the MCP tools menu.
 
-5. Test it: ask Claude *"use memcon to find anything about servo overheating."*
+5. Test it: ask Claude *"use memcon to find anything about the Redis pool exhaustion."*
 
 ---
 
