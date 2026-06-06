@@ -704,9 +704,9 @@
   <!-- ─────────── HERO ─────────── -->
   <section class="hero">
     <h1 class="tight">
-      Memory <span class="lite">for</span><br>
-      <span class="ul">Claude</span> <span class="dim">that</span><br>
-      <span class="lite">never forgets.</span>
+      Claude <span class="dim">remembers</span><br>
+      the <span class="ul">bug</span> you fixed<br>
+      <span class="lite">six months ago.</span>
     </h1>
 
     <div class="hero-foot">
@@ -1147,7 +1147,14 @@
     { n:'memcon_digest',          k:'read',     d:'Local-LLM-generated digest of the last N days. Themes · wins · open items · worth revisiting. Great for Monday-morning standups.', sig:'memcon_digest(days: int = 7)' },
     { n:'memcon_update_note',     k:'write',    d:'Append to or amend an existing note by ID. The way to revise a fact when the world changes — Claude can correct itself.', sig:'memcon_update_note(note_id: str, append: str)' },
     { n:'memcon_stats',           k:'read',     d:'Vault stats — total notes, by subsystem, by type, last write timestamp. The "how big is my memory?" tool.', sig:'memcon_stats()' },
-    { n:'memcon_subsystems',      k:'read',     d:'Lists every subsystem tag in the vault with note counts. Tells Claude which buckets exist before it tags new writes.', sig:'memcon_subsystems()' }
+    { n:'memcon_subsystems',      k:'read',     d:'Lists every subsystem tag in the vault with note counts. Tells Claude which buckets exist before it tags new writes.', sig:'memcon_subsystems()' },
+    { n:'memcon_recall',          k:'read',     d:'Debugging recall: "have we hit this before?" Ranks past debug notes by similarity AND recency, surfacing the outcome and what was already tried.', sig:'memcon_recall(problem: str, k: int = 5)' },
+    { n:'memcon_read',            k:'read',     d:'Returns the FULL markdown of a note by doc_name. query/recall return matched excerpts; call this to read the whole note before concluding.', sig:'memcon_read(doc_name: str)' },
+    { n:'memcon_write_concept',   k:'write',    d:'A concept note: a definition or mental model worth keeping — the "what this actually means" record.', sig:'memcon_write_concept(title, definition, ...)' },
+    { n:'memcon_write_reference', k:'write',    d:'Capture an external API, spec, or resource as a reference note, searchable alongside your own work.', sig:'memcon_write_reference(title, content, source)' },
+    { n:'memcon_write_meeting',   k:'write',    d:'Meeting / sync notes: attendees, decisions, action items — the record of what the room agreed.', sig:'memcon_write_meeting(title, notes, decisions, actions)' },
+    { n:'memcon_write_breakthrough', k:'write', d:'The "aha" that unlocked progress — the insight you do not want to re-derive six months from now.', sig:'memcon_write_breakthrough(title, insight, ...)' },
+    { n:'memcon_reindex',         k:'write',    d:'Re-sync the vault into the index (rebuild embeddings + entity index). The "fix my memory" maintenance tool.', sig:'memcon_reindex()' }
   ];
   var wall = document.getElementById('wall');
   var info = document.getElementById('wallInfo');

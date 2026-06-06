@@ -10,7 +10,7 @@
 ```
 
 **Memory Context for Claude.**
-**Your project never forgets.**
+**Claude remembers the bug you fixed six months ago.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-000.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-000.svg)](https://python.org)
@@ -23,13 +23,56 @@
 
 ---
 
-## What Memcon does in one paragraph
+## What memcon does
 
-Memcon (**Mem**ory **Con**text) is a local, persistent memory layer that plugs
-straight into Claude. Wire it up once and **Claude auto-queries your project
-history before answering and auto-writes new debugging sessions, decisions, and
-experiments after solving them** — no copy-paste, no manual note-taking. The
-vault grows itself while you work. Nothing leaves your machine.
+**Local project memory for Claude, over MCP.** Before it answers, Claude pulls
+the handful of notes that actually match your symptoms — then writes solved bugs
+back as plain Obsidian files you own.
+
+Every new chat with Claude starts from zero. You re-explain the project. Then you
+hit a familiar error — and re-debug something you already solved, because the fix
+left with the conversation that found it.
+
+memcon is the net under that. Wire it into Claude once (Claude Code, Desktop, or
+Cursor over MCP) and the loop closes:
+
+- **Recall, not reload.** Before answering, Claude searches your vault and pulls
+  the ~5 notes that actually match — by meaning *and* by exact symbol, filename,
+  or error string — then reads the matched note and grounds its answer in it. Not
+  the whole vault, not "infinite context."
+- **The vault writes itself.** After you confirm a fix, Claude captures the
+  session as a typed markdown note — `debug`, `decision`, `experiment`,
+  `breakthrough`. Next time the error shows up, the fix shows up with it.
+
+> **[ demo GIF — `docs/assets/recall-loop.gif` ]** describe a symptom →
+> `memcon_recall` surfaces the old debug note → Claude reads it and re-derives
+> the fix, in one turn.
+
+**And the related work travels with the hit.** Each new note self-organizes a
+`## Related` block, and the link is written *back* into the neighbor too — so
+recalling a bug also surfaces the decision it forced, in both directions. Plain
+markdown on disk, not a backlinks panel you go hunting for:
+
+```diff
+  # Redis connection pool exhaustion        (debug — the note you recalled)
+  ## Related
++ - [[switch-to-pgbouncer]]                 ← the decision it forced
+
+  # Switch to PgBouncer                     (decision — its neighbor)
+  ## Related
++ - [[redis-pool-exhaustion]]               ← reciprocal back-link, written atomically
+```
+
+These are your files. `grep` them, open them in Obsidian, edit them, or walk away
+with them — memcon doesn't need to be running to read your own notes. The vector
+index is just a rebuildable cache; there's no proprietary store to migrate out of.
+
+**Honest about what it is.** Recall is *targeted retrieval* of the few relevant
+notes — a note outside the top matches won't surface. The auto-recall /
+auto-capture reflex ships in the MCP server's `initialize` instructions, so it
+fires without pasting a system prompt — but it's *advisory*: a model may not
+always comply (you can always just say *"save this"* or *"have we seen this?"*).
+100% local — plain markdown, nothing leaves your machine.
 
 ---
 
