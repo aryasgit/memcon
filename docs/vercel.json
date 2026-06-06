@@ -1,0 +1,7 @@
+{
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/memcon", "destination": "/", "permanent": true },
+    { "source": "/memcon/:path*", "destination": "/", "permanent": true }
+  ]
+}
