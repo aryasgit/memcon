@@ -58,15 +58,14 @@
 
   /* ─────────── NAV ─────────── */
   .nav{
-    display:grid;
-    grid-template-columns:1.1fr 1.6fr 1fr;
-    gap:2.5rem;
-    padding:1.5rem 0 1.5rem;
-    align-items:start;
+    display:flex;
+    align-items:flex-start;
+    gap:3rem;
+    padding:1.4rem 0;
   }
   .brand{
     font-family:'Inter Tight',sans-serif;font-weight:500;
-    font-size:2.4rem;letter-spacing:-.055em;line-height:.95;
+    font-size:1.85rem;letter-spacing:-.055em;line-height:.95;
     color:var(--text);text-decoration:none;
     display:inline-flex;align-items:baseline;gap:.45rem;
   }
@@ -81,8 +80,8 @@
     background:var(--text);border-radius:50%;
   }
   .nav-cols{
-    display:grid;grid-template-columns:1fr 1fr;
-    gap:2.5rem;padding-top:.55rem;
+    display:flex;
+    gap:2.5rem;padding-top:.35rem;
   }
   .nav-col{display:flex;flex-direction:column;gap:.35rem}
   .nav-col a{
@@ -92,7 +91,7 @@
   }
   .nav-col a:hover{opacity:.55}
   .nav-col .muted{color:var(--faint)}
-  .nav-cta-wrap{display:flex;justify-content:flex-end;align-items:flex-start;padding-top:.4rem}
+  .nav-cta-wrap{display:flex;justify-content:flex-end;align-items:flex-start;padding-top:.25rem;margin-left:auto}
   .nav-cta{
     border:1px solid var(--text-2);color:var(--text);
     padding:.55rem 1.5rem;border-radius:999px;
@@ -101,7 +100,7 @@
   }
   .nav-cta:hover{background:var(--text);color:var(--bg)}
   @media(max-width:900px){
-    .nav{grid-template-columns:1fr auto;gap:1rem}
+    .nav{gap:1rem}
     .nav-cols{display:none}
   }
 
@@ -138,11 +137,11 @@
   }
 
   /* ─────────── HERO ─────────── */
-  .hero{padding:4.5rem 0 5rem;position:relative;overflow:hidden}
+  .hero{padding:3.2rem 0 3.5rem;position:relative;overflow:hidden;border-top:1px solid var(--line)}
   .hero h1{
     font-family:'Inter Tight',sans-serif;
     font-weight:500;
-    font-size:clamp(3.2rem,10vw,11rem);
+    font-size:clamp(2.4rem,6vw,6rem);
     line-height:.93;
     letter-spacing:-.05em;
     color:var(--text);
@@ -174,40 +173,40 @@
 
   /* ─────────── HERO FOOTER GRID ─────────── */
   .hero-foot{
-    display:grid;grid-template-columns:1.2fr 1fr 1fr;
-    gap:2.5rem;padding-top:4rem;align-items:end;
+    display:grid;grid-template-columns:1.25fr 1fr 1fr;
+    gap:2.5rem;padding-top:2.6rem;align-items:end;
   }
-  .hero-thumb{
-    background:#0e0e0e;border:1px solid var(--line-2);
-    aspect-ratio:16/10;position:relative;overflow:hidden;
-    font-family:'JetBrains Mono',monospace;font-size:.72rem;
-    color:var(--dim);
+  /* Monokai code-editor mock */
+  .editor-mock{
+    background:#272822;border:1px solid #3a3b32;border-radius:7px;
+    overflow:hidden;font-family:'JetBrains Mono',ui-monospace,monospace;
+    box-shadow:0 14px 44px rgba(0,0,0,.45);
   }
-  .hero-thumb::before{
-    content:"";position:absolute;inset:0;
-    background:
-      linear-gradient(180deg, transparent 0, rgba(0,0,0,.6) 100%),
-      radial-gradient(ellipse at 30% 30%, rgba(255,255,255,.05), transparent 60%);
-    pointer-events:none;
+  .editor-mock .em-bar{
+    display:flex;align-items:center;gap:.5rem;
+    padding:.6rem .85rem;background:#1d1e1a;border-bottom:1px solid #34352e;
   }
-  .hero-thumb .term{
-    position:absolute;inset:0;padding:1.2rem 1.4rem;
-    display:flex;flex-direction:column;gap:.35rem;
-    line-height:1.7;
+  .editor-mock .em-dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .editor-mock .em-dot.r{background:#ff5f56}
+  .editor-mock .em-dot.y{background:#ffbd2e}
+  .editor-mock .em-dot.g{background:#27c93f}
+  .editor-mock .em-file{margin-left:.55rem;font-size:.72rem;color:#a59f85;letter-spacing:.01em}
+  .editor-mock .em-body{display:flex;font-size:.74rem;line-height:1.72;padding:.7rem 0}
+  .editor-mock .em-gut{
+    padding:0 .8rem;color:#5c5d52;text-align:right;user-select:none;
+    border-right:1px solid #34352e;display:flex;flex-direction:column;flex-shrink:0;
   }
-  .hero-thumb .term .pmpt{color:var(--faint)}
-  .hero-thumb .term .out{color:var(--text-2)}
-  .hero-thumb .term .acc{color:var(--text);background:rgba(255,255,255,.08);padding:0 .25em}
-  .hero-thumb .scan{
-    position:absolute;inset:0;
-    background-image:repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(255,255,255,.015) 3px, rgba(255,255,255,.015) 4px);
-    pointer-events:none;
+  .editor-mock .em-code{
+    padding:0 1rem;color:#f8f8f2;margin:0;
+    display:flex;flex-direction:column;overflow:hidden;white-space:nowrap;
   }
-  .hero-thumb .stamp{
-    position:absolute;bottom:.7rem;right:.9rem;
-    font-family:'Inter Tight';font-size:.6rem;color:var(--faint);
-    letter-spacing:.12em;text-transform:uppercase;
-  }
+  .editor-mock .k{color:#f92672}
+  .editor-mock .a{color:#fd971f}
+  .editor-mock .s{color:#e6db74}
+  .editor-mock .n{color:#ae81ff}
+  .editor-mock .c{color:#75715e}
+  .editor-mock .ok{color:#a6e22e}
+  .editor-mock .lnk{color:#66d9ef;text-decoration:underline;text-decoration-color:rgba(102,217,239,.4)}
   .hero-aux{display:flex;flex-direction:column;gap:.85rem;font-size:.92rem;color:var(--dim)}
   .hero-aux .label{color:var(--faint);margin:0}
   .hero-aux strong{color:var(--text);font-weight:500}
@@ -610,7 +609,8 @@
     .hero{padding:2.3rem 0 2.5rem}
     .hero h1{font-size:clamp(2rem,10.5vw,2.9rem);letter-spacing:-.04em}
     .hero-foot{padding-top:1.7rem;gap:1.5rem}
-    .hero-thumb .term{font-size:.58rem;padding:.85rem .95rem;gap:.2rem;line-height:1.5}
+    .editor-mock .em-body{font-size:.62rem;line-height:1.6}
+    .editor-mock .em-file{font-size:.62rem}
     .hero-aux{font-size:.88rem}
     .start-row .startbox span{font-size:.95rem}
 
@@ -681,26 +681,6 @@
     </div>
   </header>
 
-  <!-- ─────────── PHILOSOPHY ROW ─────────── -->
-  <section class="philo">
-    <div class="l">
-      <div class="label">memcon — answers from your project</div>
-      <p>A process that lives next to Claude on your laptop. When wired in over MCP, it pulls the matching notes before Claude answers, and writes a fix back when you confirm one. Advisory: ships in the MCP instructions.</p>
-      <p>Nothing leaves the machine. Markdown on disk. MIT.</p>
-    </div>
-    <div class="c">
-      <div class="row dim"><span class="pulse"></span>Local-only · <span id="localTime">00:00:00</span></div>
-      <div class="row">Built for a robot <span style="color:var(--faint)">·</span> open source since v1.0</div>
-    </div>
-    <div class="r">
-      <div>
-        <span>Live on v3.0</span><br>
-        <span style="color:var(--faint)">Editor + 19 MCP tools</span>
-      </div>
-      <span class="side-dot"></span>
-    </div>
-  </section>
-
   <!-- ─────────── HERO ─────────── -->
   <section class="hero">
     <h1 class="tight">
@@ -710,20 +690,36 @@
     </h1>
 
     <div class="hero-foot">
-      <!-- "screenshot" terminal card -->
-      <div class="hero-thumb">
-        <div class="term">
-          <div><span class="pmpt">claude ›</span> why are requests failing under burst load again?</div>
-          <div><span class="pmpt">mcp ›</span> <span class="out">memcon_query("requests failing under burst load")</span></div>
-          <div><span class="pmpt">memcon ›</span> <span class="out">→ 5 chunks · last seen 11d ago</span></div>
-          <div><span class="pmpt">claude ›</span> <span class="out">last time the Redis connection pool was exhausted</span></div>
-          <div><span class="pmpt">claude ›</span> <span class="out">— pool size 10, held by a slow Lua script.</span></div>
-          <div><span class="pmpt">claude ›</span> <span class="out">the fix was </span><span class="acc">raising the pool to 50</span><span class="out"> + move it off the hot path.</span></div>
-          <div><span class="pmpt">mcp ›</span> <span class="out">memcon_write_debug(...)</span></div>
-          <div><span class="pmpt">vault ›</span> <span class="out">+ debugging/redis_pool_exhausted_v2.md</span></div>
+      <!-- a note on disk, open in your editor -->
+      <div class="editor-mock">
+        <div class="em-bar">
+          <span class="em-dot r"></span><span class="em-dot y"></span><span class="em-dot g"></span>
+          <span class="em-file">debugging/redis-pool-exhausted.md</span>
         </div>
-        <div class="scan"></div>
-        <div class="stamp">vault.live · 2026</div>
+        <div class="em-body">
+          <div class="em-gut">
+            <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+            <div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
+            <div>11</div><div>12</div><div>13</div><div>14</div><div>15</div>
+          </div>
+          <div class="em-code">
+            <div><span class="c">---</span></div>
+            <div><span class="a">kind:</span> <span class="s">debug</span></div>
+            <div><span class="a">subsystem:</span> <span class="s">cache</span></div>
+            <div><span class="a">status:</span> <span class="ok">resolved</span></div>
+            <div><span class="a">updated:</span> <span class="n">2026-05-27</span></div>
+            <div><span class="c">---</span></div>
+            <div><span class="k"># Redis pool exhaustion</span></div>
+            <div><span class="k">## Cause</span></div>
+            <div>Pool size <span class="n">10</span>, held by a</div>
+            <div>slow Lua script.</div>
+            <div><span class="k">## Fix</span></div>
+            <div>Raise pool <span class="n">10</span> → <span class="n">50</span>; move it</div>
+            <div>off the hot path.</div>
+            <div><span class="k">## Related</span></div>
+            <div>- <span class="lnk">[[switch-to-pgbouncer]]</span></div>
+          </div>
+        </div>
       </div>
       <div class="hero-aux">
         <span class="label">What it does</span>
@@ -752,6 +748,26 @@
           </div>
         </a>
       </div>
+    </div>
+  </section>
+
+  <!-- ─────────── PHILOSOPHY ROW (moved below hero) ─────────── -->
+  <section class="philo">
+    <div class="l">
+      <div class="label">memcon — answers from your project</div>
+      <p>A process that lives next to Claude on your laptop. When wired in over MCP, it pulls the matching notes before Claude answers, and writes a fix back when you confirm one. Advisory: ships in the MCP instructions.</p>
+      <p>Nothing leaves the machine. Markdown on disk. MIT.</p>
+    </div>
+    <div class="c">
+      <div class="row dim"><span class="pulse"></span>Local-only · <span id="localTime">00:00:00</span></div>
+      <div class="row">Built for a robot <span style="color:var(--faint)">·</span> open source since v1.0</div>
+    </div>
+    <div class="r">
+      <div>
+        <span>Live on v3.0</span><br>
+        <span style="color:var(--faint)">Editor + 19 MCP tools</span>
+      </div>
+      <span class="side-dot"></span>
     </div>
   </section>
 
