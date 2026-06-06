@@ -71,6 +71,19 @@ def ingest_file(filepath: str, force: bool = False) -> int:
         n = replace_doc(doc, chunks, vectors)
     else:
         n = upsert_chunks(chunks, vectors)
+    # Populate the exact-match entity index from the note's CONTENT — LLM-free,
+    # so recall by filename / symbol / error string works in the DEFAULT lean
+    # mode, not only when the optional Ollama extractor is on. Additive
+    # (replace=False) so it augments — never wipes — richer entities the LLM
+    # writer may already have added for this doc.
+    if doc:
+        try:
+            from memory import entity_index
+            ents = entity_index.extract_entities_from_text("\n".join(texts))
+            if ents:
+                entity_index.index_note(doc_name=doc, entities=ents, path=filepath, replace=False)
+        except Exception as e:
+            print(f"[ingest] entity index skipped for {doc}: {e}", file=sys.stderr)
     _manifest_touch(stem, mtime)
     print(f"[ingest] {filepath} → {n} chunks added", file=sys.stderr)
     return n

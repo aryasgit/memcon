@@ -110,17 +110,23 @@ def clear_doc(doc_name: str) -> int:
         return cur.rowcount
 
 
-def index_note(*, doc_name: str, entities: dict, path: str = "") -> int:
-    """Replace all entries for `doc_name` with the new entity dict.
+def index_note(*, doc_name: str, entities: dict, path: str = "", replace: bool = True) -> int:
+    """Index `entities` for `doc_name`.
 
-    `entities` is the dict produced by extractor.extract_entities() — keyed by
-    category, with list values.
+    `entities` is a dict keyed by category (files/symbols/errors/...) with list
+    values — produced by extract_entities_from_text() (LLM-free, run on every
+    ingest) or by the optional local-LLM extractor.
+
+    replace=True  (default): clear this doc's existing entries first, then insert
+                  — a clean replace so the doc's entities reflect current content.
+    replace=False: additive — insert WITHOUT clearing, so the LLM-free regex pass
+                  on ingest augments (never wipes) richer entities a smarter
+                  source (the optional LLM) may have already added for this doc.
 
     Returns the number of rows inserted.
     """
     if not entities:
-        clear_doc(doc_name)
-        return 0
+        return clear_doc(doc_name) if replace else 0
 
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     rows: list[tuple[str, str, str, str, str, str]] = []
@@ -136,7 +142,8 @@ def index_note(*, doc_name: str, entities: dict, path: str = "") -> int:
             rows.append((v, v.lower(), kind, doc_name, path, now))
 
     with _conn() as conn:
-        conn.execute("DELETE FROM entities WHERE doc_name = ?", (doc_name,))
+        if replace:
+            conn.execute("DELETE FROM entities WHERE doc_name = ?", (doc_name,))
         conn.executemany(
             "INSERT OR REPLACE INTO entities "
             "(entity, entity_lc, kind, doc_name, path, last_seen) "
@@ -213,6 +220,80 @@ def _candidate_tokens(query: str) -> list[str]:
         add(m.group(0))
 
     return out
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LLM-free entity extraction from note CONTENT
+# ──────────────────────────────────────────────────────────────────────────────
+# This is what makes exact-entity recall work in the DEFAULT lean mode. The
+# optional LLM extractor (memory/extractor.py) produces richer entities, but it
+# needs Ollama; this regex pass runs on every ingest with no LLM, so a filename,
+# symbol, or error string in a note is recallable by exact match out of the box.
+
+_EXT = (r'py|ts|tsx|js|jsx|mjs|cjs|go|rs|java|kt|c|h|cc|cpp|hpp|cs|rb|php|swift|'
+        r'scala|sh|bash|zsh|sql|json|ya?ml|toml|ini|cfg|conf|env|md|txt|html|css|'
+        r'scss|sass|vue|svelte|proto|tf|gradle|xml|csv')
+
+_ENTITY_PATTERNS = (
+    ("urls",    re.compile(r'https?://[^\s)>\]\'"]+')),
+    ("files",   re.compile(r'\b[\w-]+(?:/[\w.\-]+)+')),                          # slashed path: src/auth/jwt.ts
+    ("files",   re.compile(r'\b[\w-]+\.(?:' + _EXT + r')\b', re.IGNORECASE)),    # filename.ext
+    ("errors",  re.compile(r'\b[A-Z][A-Z0-9]{2,}(?:_[A-Z0-9]+)*\b')),           # EADDRINUSE, E_ACCES, OSERROR
+    ("symbols", re.compile(r'\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b')),              # snake_case: refresh_token
+    ("symbols", re.compile(r'\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+\b')),          # CamelCase: AuthService
+)
+_BACKTICK_RE = re.compile(r'`([^`\n]{2,80})`')
+_MAX_ENTITIES = 40
+
+
+def _classify_token(tok: str) -> str:
+    if re.match(r'https?://', tok):
+        return "urls"
+    if '/' in tok or re.search(r'\.(?:' + _EXT + r')$', tok, re.IGNORECASE):
+        return "files"
+    if tok.isupper() and len(tok) >= 3:
+        return "errors"
+    return "symbols"
+
+
+def extract_entities_from_text(text: str) -> dict:
+    """Pull engineering ENTITIES — filenames, paths, symbols, error codes, URLs —
+    out of a note's content WITHOUT an LLM.
+
+    Precision over recall: only genuinely entity-shaped tokens (plus anything in
+    `backticks`, the markdown inline-code convention) — never ordinary prose
+    words. Returns {kind: [tokens]} ready for index_note().
+    """
+    if not text:
+        return {}
+    buckets: dict[str, list[str]] = {}
+    seen: set[str] = set()
+
+    def add(kind: str, tok: str) -> None:
+        tok = tok.strip().strip('`"\'.,;:()[]{}')
+        if not tok or len(tok) > 80:
+            return
+        low = tok.lower()
+        if low in seen or low in _STOPWORDS:
+            return
+        if len(tok) < 3 and not tok.isupper():
+            return
+        seen.add(low)
+        buckets.setdefault(kind, []).append(tok)
+
+    # Backticked code spans — the highest-precision entity signal in markdown.
+    for m in _BACKTICK_RE.finditer(text):
+        span = m.group(1).strip()
+        if span and ' ' not in span:
+            add(_classify_token(span), span)
+
+    for kind, pat in _ENTITY_PATTERNS:
+        for m in pat.finditer(text):
+            if len(seen) >= _MAX_ENTITIES:
+                break
+            add(kind, m.group(0))
+
+    return {k: v[:_MAX_ENTITIES] for k, v in buckets.items() if v}
 
 
 def lookup(query: str, *, limit: int = 10) -> list[dict]:

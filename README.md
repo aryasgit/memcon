@@ -125,6 +125,23 @@ and per-client setup snippets.
 
 ---
 
+## Why memcon is different
+
+It isn't a brand-new category — local-markdown memory MCP servers exist
+([basic-memory](https://github.com/basicmachines-co/basic-memory)), as do hosted
+ones (mem0, Letta). What's different is the *combination* — and every piece has a
+test you can run (`pytest tests/test_differentiators.py`):
+
+- **Engineering-typed notes** — `debug` / `decision` / `experiment` / `breakthrough` with real fields, not one undifferentiated blob.
+- **The vault auto-writes** — Claude captures the solved bug back as a typed note (advisory, via the MCP server's instructions).
+- **Recall by meaning *and* exact match** — a SQLite entity index sits next to the vectors, so a literal `jwt.ts` or `EADDRINUSE` surfaces its note even when the wording differs. **Works in lean mode** — entities are pulled from note content on every ingest, no LLM needed.
+- **Reciprocal links** — a new note's `## Related` link is written *back* into the neighbor, so recalling a bug surfaces the decision it forced — both directions, on disk.
+- **100% local** — plain markdown + Qdrant + SQLite on your machine. No cloud, files you own.
+
+See **[HOW-IT-WORKS.md](HOW-IT-WORKS.md)** for the per-claim → code → test mapping.
+
+---
+
 ## Get it running
 
 ```bash

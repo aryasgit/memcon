@@ -195,6 +195,20 @@ def recall(problem: str, k: int = 5) -> dict:
         if dn not in best or sim > best[dn]["similarity"]:
             best[dn] = {"doc_name": dn, "similarity": sim,
                         "excerpt": (h.get("text", "") or "")[:200]}
+
+    # Exact-entity recall: a literal filename / symbol / error string in the
+    # problem must surface its note even when semantics are weak — so the
+    # flagship recall isn't semantic-only. Entity hits enter as high-confidence
+    # candidates (they cleared an exact match).
+    try:
+        from memory.entity_index import lookup as _entity_lookup
+        for eh in _entity_lookup(problem, limit=max(k, 5)):
+            dn = eh.get("doc_name")
+            if dn and dn not in best:
+                best[dn] = {"doc_name": dn, "similarity": 0.9, "excerpt": ""}
+    except Exception as e:
+        print(f"[recall] entity lookup skipped: {e}", file=sys.stderr)
+
     candidates = []
     for dn, c in best.items():
         c.update(_note_meta(dn))
