@@ -125,6 +125,21 @@ and per-client setup snippets.
 
 ---
 
+## Get it running
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh | bash
+```
+
+Then fully quit and reopen Claude Desktop — memcon is wired in. Windows, Docker-only, manual setup, the REST API, multi-project, and tuning all live under **Beyond the basics** ↓
+
+---
+
+<details>
+<summary><b>Beyond the basics</b> — install paths, clients, ingestion, CLI, REST API, config, troubleshooting</summary>
+
+<br>
+
 ## Install (the easy way)
 
 ### One-liner
@@ -680,6 +695,8 @@ Each client has its own config file:
 `scripts/register_mcp.py` only writes Claude Desktop's. Copy the same
 `memcon` block into the other config files manually if you want it
 everywhere.
+
+</details>
 
 ---
 
