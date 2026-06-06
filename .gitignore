@@ -38,3 +38,4 @@ vault/_backup_v3.1*/
 vault/**/*.md
 !vault/_templates/**
 !vault/debugging/claude_desktop_mcp_wired_up.md
+.vercel

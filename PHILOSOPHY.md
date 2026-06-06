@@ -1,8 +1,8 @@
 # Memcon — Philosophy
 
-> **Memcon = Memory + Context.**
-> A temporal-semantic debugging memory for people building things they've
-> never built before.
+> **Claude already knows what you fixed last time.**
+> memcon keeps your project's bugs, decisions, and dead ends on disk — so
+> Claude pulls the few that match before it answers. Built for engineers.
 
 ---
 
@@ -26,20 +26,16 @@ Memcon is the fix for that.
 
 ## What it is
 
-**Memory + Context.** The name is the whole thesis.
+An on-disk record an engineer keeps for their own codebase, so Claude works
+from what the project already learned.
 
-- **Memory** — the *timeline*. Every fix, every debug, every decision, every
-  dead end and every road taken, stored in order, as it happened.
+You write fixes, debugs, decisions, and dead ends as plain markdown notes.
+Before answering, Claude pulls the few notes that match your question — by
+meaning *and* by exact filename, symbol, or error string. Recall leans toward
+your most recent attempt and flags each note resolved, open, or failed — so a
+past failure warns you and a past fix answers you.
 
-- **Context** — the part that matters the moment you're stuck. Memcon doesn't
-  just hand back "matching notes." When you hit a new problem it serves a
-  **fused platter**:
-  - a **similar** problem you've faced before — *(semantic)*
-  - the **most recent** thing you tried against it — *(temporal)*
-  - whether that attempt **worked or failed** — *(outcome)*
-
-That fusion — *similar + recent + outcome, in one answer* — is the soul of the
-product. It isn't search. It's **recall**.
+It surfaces the handful of notes that matter, then Claude answers from them.
 
 ---
 
@@ -51,24 +47,21 @@ to both:
 - **You, the human** — it's plain Markdown on disk. Open it in Obsidian, read
   it, edit it, see the graph, walk away with it. Never a locked black box.
 
-- **Claude, the machine** — over MCP. It reads and writes your memory itself,
-  as part of the normal conversation, and gets the fused recall handed to it
-  automatically.
+- **Claude, the machine** — over MCP. It reads and writes your notes itself,
+  as part of the normal conversation, and pulls the matching notes when it's
+  wired in (advisory — a model may not always comply).
 
-One memory. A human and a machine, both first-class. That duality is the line
-the product holds that others don't.
+One record. A human and a machine, both first-class. The combination is the
+point: typed engineering notes, a write-back loop, recall by meaning and exact
+entity, fully local.
 
 ---
 
 ## Who it's for
 
-Memcon is a **safety net for builders** — the hobbyist, the new engineer, the
-person setting out to build something they've never built, with no map of what
-will go right and what won't.
-
-When you're doing something for the first time, you *will* forget what you
-tried. Memcon is the net under that: it remembers the path so you don't fall
-through the same hole twice.
+Working engineers — the hobbyist, the new hire, anyone building something for
+the first time. You *will* forget what you tried; memcon keeps it on disk so
+Claude can hand the relevant slice back when you need it.
 
 ---
 
@@ -97,5 +90,4 @@ through the same hole twice.
 
 ---
 
-*Memory + Context. The road you've walked, handed back to you the moment you
-need it.*
+*The road you've walked, handed back to you the moment you need it.*

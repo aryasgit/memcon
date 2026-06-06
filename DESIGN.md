@@ -223,8 +223,8 @@ the actual h2.
     <div class="cap">The Loop</div>
   </div>
   <h2 class="tight">
-    Claude asks. Memcon answers.<br>
-    <span class="dim">It writes the result back.</span> Forever.
+    Before it answers, Claude pulls the few notes that match.<br>
+    <span class="dim">After a fix, it writes one back.</span> Plain markdown on disk.
   </h2>
 </div>
 ```
@@ -650,7 +650,7 @@ Two rules:
    `.dim` gray. Pick which words deserve which weight.
 
 > Example:
-> `<h2>Claude asks. Memcon answers. <span class="dim">It writes the result back.</span> <span class="lite">Forever.</span></h2>`
+> `<h2>Before it answers, Claude pulls the few notes that match. <span class="dim">After a fix, it writes one back.</span> <span class="lite">Plain markdown on disk.</span></h2>`
 
 ### 8.6 Files to look at
 

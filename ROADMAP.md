@@ -18,7 +18,8 @@ The "MCP server you can ask Claude to use" version. Everything below is in
 - [x] RAM-tier model auto-pick from `llama3.2:1b` → `qwen2.5-coder:32b`
 - [x] Auto-register Memcon in Claude Desktop config (`scripts/register_mcp.py`)
 - [x] FastAPI dashboard at `localhost:8000/ui` with chat-style UI
-- [x] Auto Obsidian `[[wikilinks]]` to top-3 semantic neighbours on every new note
+- [x] Auto Obsidian `[[wikilinks]]` to top-3 semantic neighbours on new notes
+      (eventually-consistent; skipped while the embedding model is cold)
 - [x] Public landing page at `docs/` with `.zip` and curl install paths
 - [x] Robust against macOS sandboxing (absolute paths, `vault.path` absolutised
       at config-load, stderr-only logging)
@@ -27,8 +28,8 @@ The "MCP server you can ask Claude to use" version. Everything below is in
 
 ## v2.0 — *Memory absorbs everything* ✅ shipped
 
-Memcon stops being a notes tool and becomes a project-memory backend. Tagged
-at [`v2.0.0`](https://github.com/aryasgit/memcon/releases/tag/v2.0.0).
+Memcon goes from a few hand-written notes to ingesting your whole project's
+history. Tagged at [`v2.0.0`](https://github.com/aryasgit/memcon/releases/tag/v2.0.0).
 
 - [x] **Code ingestion** — `scripts/ingest_code.py` walks any project, respects
       `.gitignore`-style exclusions, chunks source by 80-line windows
@@ -55,55 +56,26 @@ The schema generalises. The local LLM now extracts in **four passes** instead
 of one — what gets stored is richer, what gets retrieved is more accurate.
 All still local.
 
-**Layer 1 — Universal note schema** *(✅ shipped)*
-- [x] `memory/templates.py` — 8 note kinds (debug / decision / experiment /
-      concept / reference / meeting / breakthrough / session) with per-kind
-      sections, shared outer shape (TL;DR + Context + Related + See also)
-- [x] Rich frontmatter: `id`, `type`, `created`, `updated`, `subsystem` (now
-      a list), `tags`, `status`, `confidence`, `entities` (six categories),
-      `git` ({commit, branch, changed_files}), `linked` (Obsidian wikilinks)
-- [x] `memory/writer.py` refactor: `log_universal(kind, title, fields, …)` as
-      the canonical entry; back-compat wrappers `log_debug/_decision/…`
-      preserved; new `log_concept / log_reference / log_meeting / log_breakthrough`
-- [x] Verbatim `## Context` preserved on every note — the embedder finally has
-      real prose to grip onto, not a 4-line skeleton
-
-**Layer 2 — Multi-pass extraction** *(✅ shipped)*
-- [x] `memory/extractor.py`: `classify_type` → `extract_structure` →
-      `extract_entities` → optional `self_critique`, all in Ollama JSON mode
-- [x] `memcon_capture` rewired through the pipeline; returns the kind picked,
-      confidence, and the entity dict so Claude can quote it
-- [x] Four new MCP tools: `memcon_write_concept / _reference / _meeting /
-      _breakthrough`. Total MCP surface now **16 tools**.
-
-**Layer 3 — Entity-indexed hybrid retrieval** *(✅ shipped)*
-- [x] `memory/entity_index.py` — SQLite inverted index at
-      `{vault}/.memcon/entities.db` keyed by (entity_lc, kind, doc_name);
-      `index_note()` / `clear_doc()` / `lookup()` / `stats()`
-- [x] `memory/retrieve.query()` is now **hybrid**: semantic Qdrant hits +
-      entity-index hits merged and reranked. Output adds `via` (semantic /
-      entity / both) and `entity_hits` fields. `memcon_query` benefits
-      automatically — every read tool picks up keyword-exact recall for free.
-
-**Layer 4 — Auto-enrichment** *(✅ shipped)*
-- [x] `memory/enricher.py` — background thread spawned after every write:
-      detects git context (`commit`, `branch`, `changed_files`) from the
-      project root, generates a `## See also` block with one-line summaries
-      pulled from each related note's TL;DR. Non-blocking — write returns
-      instantly.
-
-**Layer 5 — Backfill migration** *(✅ shipped)*
-- [x] `scripts/migrate_to_v3_1.py` — walks the vault, parses legacy
-      frontmatter + body, infers the kind from folder + memory_type, lifts
-      `## Symptom` / `## Cause` / `## Fix Applied` / etc. into the v3.1 field
-      names, runs entity extraction (LLM if Ollama is up, regex fallback
-      otherwise), preserves verbatim original under `## Context`, and
-      re-ingests into Qdrant
-- [x] Idempotent — second run detects `type:` in frontmatter and skips
-- [x] Safe — backs originals up to `{vault}/_backup_v3.1_<timestamp>/`
-      unless `--no-backup` is passed
-- [x] CLI: `python3 -m scripts.migrate_to_v3_1 [--dry-run] [--no-llm]
-      [--limit N] [--no-backup] [--reingest] [--verbose]`
+- [x] **Universal note schema** — 8 note kinds (debug / decision / experiment /
+      concept / reference / meeting / breakthrough / session), each with a
+      shared outer shape (TL;DR + Context + Related + See also) and rich
+      frontmatter (type, subsystem list, tags, status, confidence, entities,
+      git context, wikilinks). Verbatim `## Context` is kept on every note so
+      retrieval has real prose to grip onto.
+- [x] **Multi-pass extraction** — classify → structure → entities → optional
+      self-critique. `memcon_capture` runs through the pipeline and returns the
+      kind, confidence, and entity dict so Claude can quote it. Four new MCP
+      tools (`memcon_write_concept / _reference / _meeting / _breakthrough`)
+      bring the MCP surface to **16 tools**.
+- [x] **Entity-indexed hybrid recall** — a SQLite inverted index at
+      `{vault}/.memcon/entities.db` merges with semantic hits, so every read
+      tool picks up exact recall by filename, symbol, or error string for free.
+- [x] **Auto-enrichment** — a background thread after each write detects git
+      context and adds a `## See also` block from related notes' TL;DRs.
+      Non-blocking; the write returns instantly.
+- [x] **One-time backfill migration** for existing vaults — `scripts/migrate_to_v3_1.py`
+      lifts legacy notes into the v3.1 schema (idempotent, backs originals up
+      by default; see the script for flags).
 
 **Still to land before tagging v3.1.0:**
 - [ ] `memcon_pattern(topic)` — first crack at v4 contradiction/pattern
@@ -115,8 +87,8 @@ All still local.
 
 ## v3.0 — *Lives in your editor* 🚧 **in progress**
 
-The moat feature. Once Memcon is inline in VS Code / Cursor, engineers don't
-context-switch to a browser to consult memory — they hover and it's there.
+The part engineers reach for daily. Inline in VS Code / Cursor, no
+context-switch to a browser to consult notes — they hover and it's there.
 
 **MVP (`vscode/` folder, `memcon-vscode-0.1.0.vsix`) — ✅ shipped:**
 - [x] `Memcon: Ask` command (`Cmd+Shift+M`) — grounded answer in a markdown tab
@@ -141,10 +113,10 @@ context-switch to a browser to consult memory — they hover and it's there.
 
 ---
 
-## v4.0 — *Knows what it knows*
+## v4.0 — *Catches its own gaps*
 
-Memory that's self-aware. Stops being a passive store and starts surfacing
-patterns + flagging contradictions.
+Notes that flag contradictions and staleness. Stops being a passive store and
+starts surfacing patterns + flagging contradictions.
 
 - [ ] **Contradiction detection** — when a new note contradicts an existing one
       (same subsystem, opposite outcome), flag the old one as `stale=true` and

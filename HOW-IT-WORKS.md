@@ -31,7 +31,20 @@ surfaces its note regardless of cosine distance.
 - **Caveat:** a note indexes its entities on its *next* ingest — run
   `memcon_reindex` once to backfill a vault that predates this.
 
-## 3. Reciprocal back-links
+## 3. Recall ranks by recency and flags outcome
+`memcon_recall` doesn't just match — it ranks. Each candidate is scored
+`similarity · (1 + 0.6·recency)` (recency decays with a 30-day half-life), so an
+old-but-very-similar note still beats a recent-but-unrelated one, while your
+*latest* attempt floats up among comparable matches. Every match is labelled
+`resolved` / `open` / `failed`, so a past failure warns you and a past fix
+answers you.
+- **Code:** `memory/recall.py` (`fused_score`, `recency_factor`, `normalize_outcome`, `fuse`).
+- **Tested:** `tests/test_search_and_stress.py::test_sample_data_semantic_temporal_entity_recall`
+  (the fused recall with outcome labels); the pure ranking core is unit-tested offline.
+- **Caveat:** recency uses each note's `updated`/`created` frontmatter, falling back
+  to file mtime; outcome is read from a note's status field/section (`unknown` when absent).
+
+## 4. Reciprocal back-links
 A new note's `## Related` link is written *back* into each neighbor, so the
 connection is symmetric on disk (debug → decision *and* decision → debug) — not
 just a one-way list.
@@ -43,12 +56,12 @@ just a one-way list.
   consistent) and skipped while the embedding model is still cold on a fresh
   process.
 
-## 4. Engineering-typed notes
+## 5. Engineering-typed notes
 Eight kinds — `debug` / `decision` / `experiment` / `breakthrough` / `concept` /
 `reference` / `meeting` / `session` — each with its own sections.
 - **Code:** `memory/templates.py` (`ALL_KINDS`), `memory/writer.py`.
 
-## 5. 100% local
+## 6. 100% local
 Plain markdown on disk; embeddings via local sentence-transformers; Qdrant +
 SQLite on localhost; the optional LLM via local Ollama.
 - **Code:** `memcon.config.yaml`, `ingestion/embedder.py`, `memory/qdrant_store.py`.

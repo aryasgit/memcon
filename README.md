@@ -9,8 +9,8 @@
 ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝
 ```
 
-**Memory Context for Claude.**
-**Claude remembers the bug you fixed six months ago.**
+**Claude already knows what you fixed last time.**
+**A 100%-local MCP server that keeps your project's bugs, decisions, and dead ends on disk — so Claude pulls the few that match before it answers.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-000.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-000.svg)](https://python.org)
@@ -25,9 +25,10 @@
 
 ## What memcon does
 
-**Local project memory for Claude, over MCP.** Before it answers, Claude pulls
-the handful of notes that actually match your symptoms — then writes solved bugs
-back as plain Obsidian files you own.
+**Wire memcon into Claude once over MCP. It keeps your project's bugs, decisions,
+and experiments as plain markdown on disk.** Before it answers, Claude pulls the
+handful of notes that actually match your symptoms — then writes solved bugs back
+as plain Obsidian files you own.
 
 Every new chat with Claude starts from zero. You re-explain the project. Then you
 hit a familiar error — and re-debug something you already solved, because the fix
@@ -87,12 +88,12 @@ always comply (you can always just say *"save this"* or *"have we seen this?"*).
       Claude calls memcon_query("requests failing under burst load")
                               │
                               ▼
-   Memcon embeds the query, looks up the top-5 most similar
-   chunks from your vault — not the whole memory, only what
-   semantically matches the symptoms.
+   Memcon looks up the few notes that match — by meaning and by
+   exact filename, symbol, or error — not the whole vault, only
+   what matches the symptoms.
                               │
                               ▼
-   Claude answers grounded in YOUR history — not hallucinated.
+   Claude answers from those notes, not from scratch.
                               │
                               ▼
       You confirm the fix. Claude calls memcon_write_debug(
@@ -100,15 +101,14 @@ always comply (you can always just say *"save this"* or *"have we seen this?"*).
                               │
                               ▼
    A new markdown note lands in vault/debugging/. The Obsidian
-   watcher picks it up, embeds it, stores it. Searchable forever.
+   watcher picks it up, embeds it, stores it. Searchable the moment
+   it's written.
 ```
-
-That's it. That's the product.
 
 The MCP server is a thin process Claude Desktop / Cursor / Claude Code spawns
 on demand over stdio. **It runs entirely on your machine. Zero cloud, zero API
 cost, zero hosting.** The installer wires it into Claude Desktop for you;
-restart Claude and suddenly it has reliable long-term memory of your project.
+restart Claude and it has an on-disk record of your project it can pull from.
 
 **Low-friction writes:** you don't have to spell out every field. Tell
 Claude *"save this as a debugging session"* and `memcon_capture` saves a note
@@ -116,27 +116,21 @@ from your text instantly. In the default lean mode **Claude** supplies the
 structure (title / symptom / cause / fix / subsystem / tags); with the optional
 local LLM (`MEMCON_WITH_OLLAMA=1`) memcon auto-extracts those fields itself.
 
-**Self-organising vault:** every new note auto-gets an `## Related` section
-with Obsidian `[[wikilinks]]` to the top-3 semantically similar notes — so
-the graph view fills itself in as you work.
-
 See [`memcon_mcp/README.md`](memcon_mcp/README.md) for the full tool catalogue
 and per-client setup snippets.
 
 ---
 
-## Why memcon is different
+## What you get
 
-It isn't a brand-new category — local-markdown memory MCP servers exist
+Other local-markdown MCP servers exist
 ([basic-memory](https://github.com/basicmachines-co/basic-memory)), as do hosted
-ones (mem0, Letta). What's different is the *combination* — and every piece has a
+ones (mem0, Letta). The edge here is the *combination* — and every piece has a
 test you can run (`pytest tests/test_differentiators.py`):
 
-- **Engineering-typed notes** — `debug` / `decision` / `experiment` / `breakthrough` with real fields, not one undifferentiated blob.
-- **The vault auto-writes** — Claude captures the solved bug back as a typed note (advisory, via the MCP server's instructions).
-- **Recall by meaning *and* exact match** — a SQLite entity index sits next to the vectors, so a literal `jwt.ts` or `EADDRINUSE` surfaces its note even when the wording differs. **Works in lean mode** — entities are pulled from note content on every ingest, no LLM needed.
-- **Reciprocal links** — a new note's `## Related` link is written *back* into the neighbor, so recalling a bug surfaces the decision it forced — both directions, on disk.
-- **100% local** — plain markdown + Qdrant + SQLite on your machine. No cloud, files you own.
+- **Engineering-typed notes that write themselves back** — `debug` / `decision` / `experiment` / `breakthrough` with real fields, not one undifferentiated blob. When you confirm a fix, Claude captures the solved bug back as a typed note (advisory, via the MCP server's instructions). Reciprocal `## Related` links are written *back* into the neighbor, so recalling a bug surfaces the decision it forced — both directions, on disk.
+- **Recall by meaning, exact match, *and* recency** — a SQLite entity index sits next to the vectors, so a literal `jwt.ts` or `EADDRINUSE` surfaces its note even when the wording differs (works in lean mode — entities come from note content on every ingest, no LLM). `memcon_recall` then lifts your most recent matching attempt and labels each one resolved / open / failed: a past fix answers you, a past failure warns you.
+- **100% local, files you own** — plain markdown + Qdrant + SQLite on your machine. No cloud.
 
 See **[HOW-IT-WORKS.md](HOW-IT-WORKS.md)** for the per-claim → code → test mapping.
 
@@ -277,15 +271,9 @@ If you installed manually (or want to wire other clients):
    ```
 
    On Windows, the command path is
-   `C:\path\to\memcon\.venv\Scripts\python.exe` instead.
-
-   > Why `args=["…/server.py"]` instead of `args=["-m","memcon_mcp.server"]`?
-   > Claude Desktop on macOS sandboxes the MCP subprocess with `cwd=/` and
-   > strips `PYTHONPATH`, so `-m` can't find the `memcon_mcp` package.
-   > Running `server.py` by absolute path puts the script's directory on
-   > `sys.path` automatically and works under the sandbox. The `cwd` field
-   > pins the working dir to the repo so `.env` and any relative paths
-   > resolve against the project root, not `/`.
+   `C:\path\to\memcon\.venv\Scripts\python.exe` instead. (Use `server.py` by
+   absolute path, not `-m memcon_mcp.server` — see the troubleshooting table for
+   why.)
 
 4. Fully quit Claude Desktop (`Cmd+Q` / right-click tray → Quit), reopen.
 5. Ask Claude *"use memcon to check what we know about the Redis pool exhaustion."*
@@ -427,29 +415,13 @@ export MEMCON_COLLECTION=bar_memory
 
 ---
 
-## Cross-OS install matrix
+## Cross-OS install
 
-| OS | One-liner | Notes |
-|---|---|---|
-| **macOS / Linux / WSL** | `curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh \| bash` | Uses bash |
-| **Windows native** (PowerShell) | `iwr -useb https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.ps1 \| iex` | Uses PowerShell + `install.bat` |
-
-Behind the scenes:
-
-| Concern | macOS | Linux | Windows |
-|---|---|---|---|
-| Bootstrap script | `bootstrap.sh` | `bootstrap.sh` | `bootstrap.ps1` |
-| Installer | `install.sh` | `install.sh` | `install.bat` |
-| RAM detection | `sysctl hw.memsize` | `/proc/meminfo` | `wmic` |
-| Claude config path | `~/Library/Application Support/Claude/…` | `~/.config/Claude/…` | `%APPDATA%\Claude\…` |
-| Venv interpreter | `.venv/bin/python3` | `.venv/bin/python3` | `.venv\Scripts\python.exe` |
-| Skip MCP registration | `MEMCON_SKIP_MCP=1 …` | same | `set MEMCON_SKIP_MCP=1` |
-
-`scripts/register_mcp.py` is cross-platform and handles all three config
-paths and venv layouts. Bad / non-JSON existing configs get backed up
-automatically (`*.bak-<timestamp>`). Permission failures degrade gracefully
-— the rest of the install keeps going and the script prints a one-line
-warning.
+The one-liners and env-var overrides above (*Install — the easy way*) cover
+macOS / Linux / WSL and Windows. `scripts/register_mcp.py` is cross-platform: it
+handles all three Claude config paths and venv layouts, backs up bad / non-JSON
+configs (`*.bak-<timestamp>`), and degrades gracefully on permission failures —
+the install keeps going and prints a one-line warning.
 
 ---
 
@@ -662,23 +634,6 @@ Most common causes:
 | `No module named 'mcp'` / `'openai'` | venv is missing dependencies. Run `./install.sh` or `.venv/bin/python3 -m pip install -r requirements.txt`. |
 | `[Errno 30] Read-only file system: 'vault'` | Old code with relative `vault.path`. `git pull` and restart Claude Desktop — the fix is in `config.py` (absolutises the vault path at config-load). |
 | `Connection refused` to localhost:6333 | Qdrant container is stopped. `cd ~/memcon && docker compose up -d` |
-
-### "save this" / "save debug session" — Claude asks for more details instead of saving
-
-memcon's server instructions tell Claude to route loose "save/log/remember
-this" commands straight to `memcon_capture` — which never asks you to spell out
-title/symptom/cause/fix; it just saves the raw text. If Claude still asks for
-details instead of saving, reinforce it by pasting the auto-triggering block
-above into Claude's project memory. Any of these phrases should then route
-through `memcon_capture` — Claude structures the note (or, with the optional
-local LLM, memcon auto-extracts the fields):
-- "save this" / "save it" / "log this"
-- "save the debugging session" / "log my decision" / "remember this experiment"
-- "session summary" / "save today's session"
-
-If you're invoking from outside Claude (curl, scripts, etc.), call
-`memcon_capture(text=...)` directly with a paragraph of context — no need
-to fill in title/symptom/cause/fix yourself.
 
 ### `install.sh` set `embedding_model` to my LLM model
 

@@ -1,7 +1,7 @@
 {
   "name": "memcon-vscode",
   "displayName": "Memcon",
-  "description": "Local memory layer for Claude — ask questions, save context, and browse project memory inline in VS Code or Cursor.",
+  "description": "Your project's bugs and decisions, in front of Claude — ask grounded questions, save context, and browse your project's notes inline in VS Code or Cursor.",
   "version": "0.1.0",
   "publisher": "aryasgit",
   "license": "MIT",

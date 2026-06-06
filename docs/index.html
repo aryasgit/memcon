@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memcon — Memory for Claude.</title>
-<meta name="description" content="Local project memory for Claude. Recalls the handful of relevant notes before answering, then writes solved bugs back as plain Obsidian files. 100% local, no cloud.">
-<meta property="og:title" content="Memcon — Memory for Claude.">
-<meta property="og:description" content="Local project memory for Claude. Recalls the handful of relevant notes before answering, then writes solved bugs back as plain Obsidian files. 100% local, no cloud.">
+<title>memcon — Claude answers from your project, not from scratch.</title>
+<meta name="description" content="A 100%-local MCP server for Claude. Recalls the handful of relevant notes before answering, then writes solved bugs back as plain Obsidian files. 100% local, no cloud.">
+<meta property="og:title" content="memcon — Claude answers from your project, not from scratch.">
+<meta property="og:description" content="A 100%-local MCP server for Claude. Recalls the handful of relevant notes before answering, then writes solved bugs back as plain Obsidian files. 100% local, no cloud.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Inter+Tight:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -684,8 +684,8 @@
   <!-- ─────────── PHILOSOPHY ROW ─────────── -->
   <section class="philo">
     <div class="l">
-      <div class="label">Memcon — local memory layer</div>
-      <p>A process that lives next to Claude on your laptop. Auto-queries your project history before answering. Auto-writes debug sessions after solving.</p>
+      <div class="label">memcon — answers from your project</div>
+      <p>A process that lives next to Claude on your laptop. When wired in over MCP, it pulls the matching notes before Claude answers, and writes a fix back when you confirm one. Advisory: ships in the MCP instructions.</p>
       <p>Nothing leaves the machine. Markdown on disk. MIT.</p>
     </div>
     <div class="c">
@@ -704,9 +704,9 @@
   <!-- ─────────── HERO ─────────── -->
   <section class="hero">
     <h1 class="tight">
-      Claude <span class="dim">remembers</span><br>
-      the <span class="ul">bug</span> you fixed<br>
-      <span class="lite">six months ago.</span>
+      Claude already <span class="dim">knows</span><br>
+      what you <span class="ul">fixed</span><br>
+      <span class="lite">last time.</span>
     </h1>
 
     <div class="hero-foot">
@@ -727,7 +727,7 @@
       </div>
       <div class="hero-aux">
         <span class="label">What it does</span>
-        <span><strong>Plugs into Claude over MCP.</strong> Pulls the ~5 relevant notes before answering. Writes a solved bug back when you confirm the fix. 100% local.</span>
+        <span><strong>Plugs into Claude over MCP.</strong> When wired in, Claude pulls the ~5 relevant notes before answering and writes a fix back when you confirm one. 100% local.</span>
         <span class="label" style="margin-top:.5rem">Runs on</span>
         <span><strong>macOS · Linux · WSL · Windows.</strong> Docker + Python. Local LLM optional.</span>
       </div>
@@ -755,37 +755,7 @@
     </div>
   </section>
 
-</div><!-- /wrap (marquee escapes the wrap) -->
-
-<!-- ─────────── MARQUEE BAND ─────────── -->
-<div class="marq">
-  <div class="lane">
-    <span>memcon_query</span>
-    <span>memcon_ask</span>
-    <span>memcon_capture</span>
-    <span>memcon_write_debug</span>
-    <span>memcon_write_decision</span>
-    <span>memcon_write_experiment</span>
-    <span>memcon_session_summary</span>
-    <span>memcon_timeline</span>
-    <span>memcon_digest</span>
-    <span>memcon_update_note</span>
-    <span>memcon_stats</span>
-    <span>memcon_subsystems</span>
-    <span>memcon_query</span>
-    <span>memcon_ask</span>
-    <span>memcon_capture</span>
-    <span>memcon_write_debug</span>
-    <span>memcon_write_decision</span>
-    <span>memcon_write_experiment</span>
-    <span>memcon_session_summary</span>
-    <span>memcon_timeline</span>
-    <span>memcon_digest</span>
-    <span>memcon_update_note</span>
-    <span>memcon_stats</span>
-    <span>memcon_subsystems</span>
-  </div>
-</div>
+</div><!-- /wrap -->
 
 <div class="wrap">
 
@@ -796,7 +766,7 @@
         <div class="num">01</div>
         <div class="cap">The Loop</div>
       </div>
-      <h2 class="tight">Claude asks. Memcon returns the relevant notes.<br><span class="dim">Claude writes the result back.</span> <span class="lite">As plain markdown.</span></h2>
+      <h2 class="tight">Before it answers, Claude pulls the few notes that match. After a fix, it writes one back. Plain markdown on disk.</h2>
     </div>
 
     <div class="loop reveal">
@@ -808,7 +778,7 @@
           <div class="mcp">prompt</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>You ask Claude — same as always. There's no extra UI, no "open Memcon" step. Memcon hooks in via MCP so Claude has it available as a tool.</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>You ask Claude — same as always. There's no extra UI, no "open memcon" step. It hooks in over MCP, so Claude has it available as a tool.</div></div></div>
       </div>
       <div class="step" data-step="2">
         <div class="top">
@@ -818,17 +788,17 @@
           <div class="mcp">memcon_query("requests…")</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>Claude decides this question would benefit from prior context and invokes <span class="mono">memcon_query</span>. You didn't ask it to — it's listed as a tool, the model picks it up.</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>Claude decides this question would benefit from prior context and reaches for the recall tool. You didn't ask it to — it's listed as a tool, the model picks it up.</div></div></div>
       </div>
       <div class="step" data-step="3">
         <div class="top">
           <div class="n">03</div>
-          <div class="who">Memcon<small>semantic search</small></div>
-          <div class="verb">Top-5 chunks. Not the whole thing.</div>
-          <div class="mcp">→ 5 chunks · 384d</div>
+          <div class="who">memcon<small>lookup</small></div>
+          <div class="verb">The few notes that match. Not the whole thing.</div>
+          <div class="mcp">→ ~5 notes</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>sentence-transformers embeds the question, Qdrant returns the 5 nearest chunks from your vault. Embedding-keyed, not string-keyed — "requests dropping at peak" still finds "Redis pool exhausted."</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>Matched by meaning and by exact filename, symbol, or error string — so "requests dropping at peak" still finds the "Redis pool exhausted" note. Only the matching notes come back, not the whole vault.</div></div></div>
       </div>
       <div class="step" data-step="4">
         <div class="top">
@@ -838,7 +808,7 @@
           <div class="mcp">+ sources</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>"Last time, the Redis connection pool (size 10) was exhausted by a slow Lua script holding connections. The fix was raising the pool to 50 and moving the script off the hot path." — sourced from notes Claude can quote.</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>"Last time, the Redis connection pool (size 10) was exhausted by a slow Lua script holding connections. The fix was raising the pool to 50 and moving the script off the hot path." — answered from the matching notes, which Claude can quote.</div></div></div>
       </div>
       <div class="step" data-step="5">
         <div class="top">
@@ -848,17 +818,17 @@
           <div class="mcp">memcon_write_debug(...)</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>No copy-paste. Claude extracts title / symptom / cause / fix from the conversation and writes a structured markdown note. Auto-tags subsystem. Auto-links to top-3 semantic neighbours.</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>No copy-paste. Claude extracts title / symptom / cause / fix from the conversation and writes a typed markdown note, tagged by subsystem and linked to related notes.</div></div></div>
       </div>
       <div class="step" data-step="6">
         <div class="top">
           <div class="n">06</div>
           <div class="who">Vault<small>persisted</small></div>
-          <div class="verb">New <span class="mono">.md</span> in <span class="mono">vault/debugging/</span>. Searchable next session.</div>
-          <div class="mcp">+ watcher reingest</div>
+          <div class="verb">New <span class="mono">.md</span> in <span class="mono">vault/debugging/</span>. Searchable the moment it's written.</div>
+          <div class="mcp">+ reindexed</div>
           <div class="caret">+</div>
         </div>
-        <div class="body"><div class="body-inner"><div></div><div>Obsidian sees the file instantly via vault-watch. <span class="mono">watcher.py</span> re-ingests it into Qdrant. The next time anyone asks about pool exhaustion, this answer is part of memory.</div></div></div>
+        <div class="body"><div class="body-inner"><div></div><div>The file lands in your vault and is re-indexed in the background. The next time anyone asks about pool exhaustion, this note is one of the matches Claude can pull.</div></div></div>
       </div>
     </div>
   </section>
@@ -868,22 +838,22 @@
     <div class="sec-head reveal">
       <div class="l">
         <div class="num">02</div>
-        <div class="cap">Why this is different</div>
+        <div class="cap">What you get</div>
       </div>
-      <h2 class="tight">Not RAG. Not a chatbot. <span class="dim">A backend brain.</span></h2>
+      <h2 class="tight">An on-disk record of your project. <span class="dim">Read before Claude answers.</span></h2>
     </div>
     <div class="stats reveal">
       <div class="stat">
         <div class="big">19<sup>tools</sup></div>
-        <div class="lab"><strong>MCP-native.</strong> Claude decides when to query and when to write — both are tool calls.</div>
+        <div class="lab"><strong>MCP-native.</strong> Claude decides when to read and when to write — both are tool calls.</div>
       </div>
       <div class="stat">
         <div class="big">0<sup>cloud</sup></div>
-        <div class="lab"><strong>Local Qdrant.</strong> Local embeddings. Optional local LLM. Your code never leaves your laptop.</div>
+        <div class="lab"><strong>Runs locally.</strong> Optional local LLM. Your code never leaves your laptop.</div>
       </div>
       <div class="stat">
         <div class="big">$0<sup>fee</sup></div>
-        <div class="lab"><strong>No API keys.</strong> No subscriptions. The recurring cost is exactly electricity.</div>
+        <div class="lab"><strong>No API keys, no per-call fee.</strong> No subscriptions.</div>
       </div>
       <div class="stat">
         <div class="big">100<sup>%md</sup></div>
@@ -897,9 +867,9 @@
     <div class="sec-head reveal">
       <div class="l">
         <div class="num">03</div>
-        <div class="cap">MCP Surface</div>
+        <div class="cap">The tools Claude calls</div>
       </div>
-      <h2 class="tight">19 tools. <span class="dim">Read, write, time-slice, summarise.</span></h2>
+      <h2 class="tight">19 tools <span class="dim">to read, write, and review your project's notes.</span></h2>
     </div>
 
     <div class="wall-grid reveal">
@@ -934,7 +904,7 @@
           <div class="gut">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14</div>
           <div class="src"><span class="com">// Ask Memcon — Cmd+Shift+M</span>
 <span class="kw">const</span> <span class="var">q</span> = <span class="kw">await</span> vscode.window.<span class="fn">showInputBox</span>({
-  prompt: <span class="str">"Ask your project memory"</span>
+  prompt: <span class="str">"Ask your project"</span>
 });
 
 <span class="hl"><span class="kw">const</span> <span class="var">r</span> = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${api}/memory/ask`</span>, {</span>
@@ -967,14 +937,7 @@
           <span class="kbd">⌘⇧P</span>
           <div>
             <h4>Recent tree</h4>
-            <p>Sidebar view of the last N notes. Click to peek the full markdown. Auto-refreshes.</p>
-          </div>
-        </div>
-        <div class="pt">
-          <span class="kbd">↗</span>
-          <div>
-            <h4>Same VSIX, both editors</h4>
-            <p>Built for VS Code 1.85+. Cursor reads it natively. Marketplace + Open VSX coming.</p>
+            <p>Sidebar view of the last N notes. Click to peek the full markdown. Auto-refreshes. Built for VS Code 1.85+; Cursor reads it natively.</p>
           </div>
         </div>
       </div>
@@ -993,8 +956,8 @@
 
     <div class="install-grid reveal">
       <div class="install-left">
-        <h3 class="tight">Lean by default — Claude does the reasoning. Registers itself with Claude Desktop.</h3>
-        <p>The bootstrap script installs Docker if missing, brings up Qdrant, ingests your starter vault, then patches your <span class="mono">claude_desktop_config.json</span> so the MCP server is wired up on Claude's next restart. No local LLM required — Claude does the reasoning. Want fully-offline LLM features? Re-run with <span class="mono">MEMCON_WITH_OLLAMA=1</span>.</p>
+        <h3 class="tight">Lean by default. Registers itself with Claude Desktop.</h3>
+        <p>The bootstrap script installs Docker if missing, brings up the index, ingests your starter vault, then patches your <span class="mono">claude_desktop_config.json</span> so the MCP server is wired up on Claude's next restart. No local LLM required — Claude does the reasoning. Want fully-offline LLM features? Re-run with <span class="mono">MEMCON_WITH_OLLAMA=1</span>.</p>
         <ul>
           <li>Docker · Python 3.10+ required</li>
           <li>~1.5 GB disk · ~2 GB RAM · no local LLM (lean default)</li>
@@ -1079,7 +1042,7 @@
       </div>
       <div class="foot-col">
         <h5>Note</h5>
-        <p class="lead-p">Memcon started as the project-memory backend for the BARQ quadruped robot. It generalises. Bring your own vault — robotics, infra, web. The local-first promise stays.</p>
+        <p class="lead-p">Memcon started as the on-disk project record for the BARQ quadruped robot. It generalises. Bring your own vault — robotics, infra, web. The local-first promise stays.</p>
       </div>
     </div>
 
@@ -1136,7 +1099,7 @@
 
   // ── MCP tool wall ──────────────────────────────────
   var TOOLS = [
-    { n:'memcon_query',           k:'read',     d:'Semantic search over your vault. Returns the top-K chunks by embedding similarity. The most-used read tool — Claude reaches for this before answering almost anything.', sig:'memcon_query(question: str, top_k: int = 5)' },
+    { n:'memcon_query',           k:'read',     d:'Search over your vault. Returns the top-K matching chunks. Claude reaches for this before answering almost anything.', sig:'memcon_query(question: str, top_k: int = 5)' },
     { n:'memcon_ask',             k:'read',     d:'Returns vault chunks grounded to your question, with cited sources, for the assistant to answer from. With an optional local LLM, also synthesises the answer itself.', sig:'memcon_ask(question: str)' },
     { n:'memcon_capture',         k:'write',    d:'Single natural-language write. Pass a freeform paragraph; it is captured instantly (raw text searchable). With an optional local LLM it auto-structures into title / symptom / cause / fix in the background.', sig:'memcon_capture(text: str, subsystem?: str)' },
     { n:'memcon_write_debug',     k:'write',    d:'Structured debug note: title, symptom, cause, fix, subsystem. Auto-tagged, auto-linked to top-3 semantic neighbours.', sig:'memcon_write_debug(title, symptom, cause, fix, subsystem)' },
@@ -1144,16 +1107,16 @@
     { n:'memcon_write_experiment',k:'write',    d:'An experiment record: hypothesis, setup, result, conclusion. For when you tried something and want to remember whether it worked.', sig:'memcon_write_experiment(title, hypothesis, setup, result, conclusion)' },
     { n:'memcon_session_summary', k:'write',    d:'Roll up the current Claude conversation into a session note. Useful at the end of a long debugging arc.', sig:'memcon_session_summary(title: str, summary: str, tags?: list)' },
     { n:'memcon_timeline',        k:'read',     d:'Time-bounded slice of recent notes. "What did I work on last week?" — returns notes ordered chronologically.', sig:'memcon_timeline(days: int = 7)' },
-    { n:'memcon_digest',          k:'read',     d:'Local-LLM-generated digest of the last N days. Themes · wins · open items · worth revisiting. Great for Monday-morning standups.', sig:'memcon_digest(days: int = 7)' },
+    { n:'memcon_digest',          k:'read',     d:'Local-LLM-generated digest of the last N days. Themes · wins · open items · worth revisiting.', sig:'memcon_digest(days: int = 7)' },
     { n:'memcon_update_note',     k:'write',    d:'Append to or amend an existing note by ID. The way to revise a fact when the world changes — Claude can correct itself.', sig:'memcon_update_note(note_id: str, append: str)' },
-    { n:'memcon_stats',           k:'read',     d:'Vault stats — total notes, by subsystem, by type, last write timestamp. The "how big is my memory?" tool.', sig:'memcon_stats()' },
+    { n:'memcon_stats',           k:'read',     d:'Vault stats — total notes, by subsystem, by type, last write timestamp.', sig:'memcon_stats()' },
     { n:'memcon_subsystems',      k:'read',     d:'Lists every subsystem tag in the vault with note counts. Tells Claude which buckets exist before it tags new writes.', sig:'memcon_subsystems()' },
     { n:'memcon_recall',          k:'read',     d:'Debugging recall: "have we hit this before?" Ranks past debug notes by similarity AND recency, surfacing the outcome and what was already tried.', sig:'memcon_recall(problem: str, k: int = 5)' },
     { n:'memcon_read',            k:'read',     d:'Returns the FULL markdown of a note by doc_name. query/recall return matched excerpts; call this to read the whole note before concluding.', sig:'memcon_read(doc_name: str)' },
     { n:'memcon_write_concept',   k:'write',    d:'A concept note: a definition or mental model worth keeping — the "what this actually means" record.', sig:'memcon_write_concept(title, definition, ...)' },
     { n:'memcon_write_reference', k:'write',    d:'Capture an external API, spec, or resource as a reference note, searchable alongside your own work.', sig:'memcon_write_reference(title, content, source)' },
     { n:'memcon_write_meeting',   k:'write',    d:'Meeting / sync notes: attendees, decisions, action items — the record of what the room agreed.', sig:'memcon_write_meeting(title, notes, decisions, actions)' },
-    { n:'memcon_write_breakthrough', k:'write', d:'The "aha" that unlocked progress — the insight you do not want to re-derive six months from now.', sig:'memcon_write_breakthrough(title, insight, ...)' },
+    { n:'memcon_write_breakthrough', k:'write', d:'The "aha" that unlocked progress — the insight worth keeping.', sig:'memcon_write_breakthrough(title, insight, ...)' },
     { n:'memcon_reindex',         k:'write',    d:'Re-sync the vault into the index (rebuild embeddings + entity index). The "fix my memory" maintenance tool.', sig:'memcon_reindex()' }
   ];
   var wall = document.getElementById('wall');

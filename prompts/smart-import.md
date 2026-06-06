@@ -1,13 +1,11 @@
 # Memcon — Smart Import
 
-A master prompt that turns **one brain-dump into many interlinked memory nodes.**
+A master prompt that turns **one brain-dump into many interlinked, typed notes** — one pass to seed an empty vault from history you already have.
 
 `memcon_capture` takes one blurb → one note. Smart Import is the opposite: paste a
 big, messy file (old notes, a chat log, a project README, a brain-dump) and the
-model **segments it into atomic memories**, saves each as the right *kind* of note,
-and lets memcon auto-backlink them into a connected foundation. Run it once to seed
-a fresh brain from history you already have — turning an empty vault into a graph
-you can immediately `memcon_recall` against.
+model splits it into atomic notes, saves each as the right *kind*, and lets memcon
+auto-backlink them. Run it once to seed an empty vault from history you already have.
 
 ## How to use
 
@@ -16,9 +14,8 @@ you can immediately `memcon_recall` against.
 3. Replace `<<<PASTE YOUR NOTES HERE>>>` with your backfill markdown.
 4. Send it. The model creates the nodes and ends with a receipt.
 
-> No Ollama / Docker required for the import itself — the host model you're already
-> talking to does the segmentation. The only thing that touches memcon is the
-> `memcon_write_*` calls.
+> No Ollama / Docker needed for the import — the host model does the segmentation;
+> only the `memcon_write_*` calls touch memcon.
 
 ---
 
@@ -95,7 +92,7 @@ SOURCE TEXT:
 
 ## What you get
 
-The import produces real `.md` files in your vault, each templated by kind, each
-auto-backlinked to related notes (cosine ≥ 0.30, bidirectional). The result is a
-connected graph you can open in Obsidian and query with `memcon_recall` the moment
-it finishes — the fastest way to take a brand-new install from "empty" to "useful."
+The import produces real `.md` files in your vault, each templated by kind and
+auto-backlinked to related notes (cosine ≥ 0.30, bidirectional) — interlinked
+notes you can open in Obsidian and recall against with `memcon_recall`. One pass
+from empty to useful.

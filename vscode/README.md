@@ -1,8 +1,6 @@
 # Memcon for VS Code & Cursor
 
-Local memory layer for Claude — inline in your editor. Ask grounded
-questions, save context from any code selection, and browse project memory
-without leaving VS Code or Cursor.
+Your project's bugs and decisions, in front of Claude — ask grounded questions, save context, and browse your project's notes inline in VS Code or Cursor.
 
 > Requires Memcon running locally. Install with:
 > ```bash
@@ -12,8 +10,8 @@ without leaving VS Code or Cursor.
 ## What it does
 
 - **Memcon: Ask** (`Cmd+Shift+M` / `Ctrl+Shift+M`) — pops an input, calls
-  the local `/ask` endpoint, and opens an untitled markdown editor with
-  the grounded answer + sources.
+  the local `/ask` endpoint, and opens a markdown tab with the matching
+  notes (plus a composed answer when a local model is configured).
 - **Memcon: Save selection to memory** (`Cmd+Shift+S` / `Ctrl+Shift+S`
   when text is selected, or right-click → *Save selection to memory*) —
   captures the selected code along with the file path and an optional
@@ -57,9 +55,9 @@ code .       # or: cursor .
 In the new editor window, press `F5` to launch an Extension Development
 Host with Memcon loaded.
 
-### Option C — marketplace (coming soon)
+### Option C — marketplace
 
-Will publish to the VS Code Marketplace and Open VSX once stable.
+Marketplace publish is planned (see [ROADMAP](../ROADMAP.md)).
 
 ## Configuration
 
@@ -80,20 +78,13 @@ cd ~/memcon && ./start.sh
 *Code → Preferences → Keyboard Shortcuts*, search for `memcon`.
 
 **Sidebar shows "api offline"** — check `memcon.apiUrl` matches where
-your Memcon is actually running. If you're using `docker-compose.full.yml`
-the API is still on `localhost:8000` by default.
+your Memcon is actually running (still `localhost:8000` by default, even
+with `docker-compose.full.yml`).
 
 ## What's next
 
-Planned for v0.2:
-
-- Code lens on functions: *"3 related debug sessions, 2 decisions"*
-- Hover provider: top-1 related note shown when hovering a symbol
-- Status bar widget: *"last memcon write: 12 min ago"*
-- Direct `memcon_capture` integration (full natural-language save —
-  Claude- or optional-local-LLM-structured, not just session-summary)
-
-See the main [Memcon ROADMAP](../ROADMAP.md) for the bigger picture.
+See the main [Memcon ROADMAP](../ROADMAP.md) for planned features (code
+lens, hover provider, status-bar widget, direct `memcon_capture`).
 
 ## License
 

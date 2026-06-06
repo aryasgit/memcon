@@ -1,10 +1,11 @@
 """
 Memcon MCP Server — exposes Memcon memory as Model Context Protocol tools.
 
-Lets Claude (Desktop, Cursor, Code) auto-query relevant past work before
-answering, and auto-write debug sessions / decisions / experiments after
-solving a problem. No HTTP, no manual notes — Memcon becomes a persistent
-backend brain for any LLM session.
+When wired into Claude (Desktop, Cursor, Code) over MCP, the shipped instructions
+prompt it to pull the matching notes before answering and write a fix back after
+solving a problem — advisory, a model may not always comply. No HTTP, no manual
+notes: memcon keeps your project's bugs, decisions, and experiments as local
+markdown on disk.
 
 Run as stdio server (default for Claude Desktop / Cursor):
     python3 -m memcon_mcp.server
@@ -48,7 +49,7 @@ for _n in ("httpx", "httpcore", "qdrant_client", "sentence_transformers", "urlli
 # the user pasting a system prompt. It's advisory (a client/model may not always
 # comply), so it raises reliability a lot but isn't a 100% guarantee — see README.
 MEMCON_INSTRUCTIONS = (
-    "memcon is this project's persistent memory — local markdown notes you own, plus search. "
+    "memcon is this project's on-disk record — its bugs, decisions, and experiments as local markdown notes you own, plus search. "
     "Use it reflexively, without being asked:\n"
     "1. BEFORE answering anything about this project — or the moment the user hits a "
     "bug/error/regression, or asks 'have we seen this?' — call memcon_recall (debugging) or "

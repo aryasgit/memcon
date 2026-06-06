@@ -602,15 +602,15 @@
       <div class="col">
         <div id="hero" class="hero">
           <h1 class="tight">
-            Memory for<br>
-            <span class="lite">Claude</span> <span class="dim">that</span><br>
-            never forgets.
+            Claude answers<br>
+            <span class="lite">from your</span> <span class="dim">project,</span><br>
+            not from scratch.
           </h1>
-          <p>Ask Memcon a question about your engineering history. Local vectors, grounded answers, zero cloud.</p>
+          <p>Ask about a bug, a decision, or a file. Claude reads the few matching notes, then answers from them.</p>
 
           <div class="note" id="mcp-banner">
             <span class="k">MCP</span>
-            <span class="body">Plug Memcon into Claude Desktop, Cursor, or Claude Code so it auto-queries and auto-writes project memory. See <a href="https://github.com/aryasgit/memcon/tree/main/memcon_mcp" target="_blank">memcon_mcp/README.md</a>.</span>
+            <span class="body">Wire memcon into Claude Desktop, Cursor, or Claude Code so it can pull matching notes before answering and write a fix back after — advisory, ships in the MCP instructions. See <a href="https://github.com/aryasgit/memcon/tree/main/memcon_mcp" target="_blank">memcon_mcp/README.md</a>.</span>
             <button class="dismiss" onclick="dismissBanner()" title="hide">×</button>
           </div>
 
@@ -622,8 +622,8 @@
 
         <div class="write-panel" id="write-panel">
           <div class="write-head">
-            <h2 class="tight">Write to memory. <span class="dim">Directly.</span></h2>
-            <p>Fill the structured fields and Memcon writes a real markdown note to your vault. Auto-tagged, auto-linked to top-3 semantic neighbours.</p>
+            <h2 class="tight">Write a note. <span class="dim">Directly.</span></h2>
+            <p>Fill the structured fields and Memcon saves a typed markdown note in your vault, auto-tagged and linked to related notes.</p>
           </div>
           <div class="write-types">
             <button class="wt active" id="wt-debug" onclick="setWriteType('debug')">Debug</button>
@@ -640,7 +640,7 @@
     <div class="dock" id="dock">
       <div class="dock-inner">
         <div class="composer">
-          <textarea id="query" rows="1" placeholder="Ask anything about your project memory…"
+          <textarea id="query" rows="1" placeholder="Ask about a bug, a file, or a decision…"
             oninput="autosize(this)"
             onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();doSubmit();}"></textarea>
           <div class="composer-row">
@@ -831,7 +831,7 @@ function setMode(m){
   if (hint) hint.textContent = m === 'ask' ? 'ask · grounded' : 'search · raw chunks';
   var ph = document.getElementById('query');
   if (ph) ph.placeholder = m === 'ask'
-    ? 'Ask anything about your project memory…'
+    ? 'Ask about a bug, a file, or a decision…'
     : 'Search by keywords or symptoms…';
   if (isWrite){ renderWriteForm(); }
 }

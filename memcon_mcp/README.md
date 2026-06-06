@@ -1,14 +1,15 @@
 # Memcon MCP Server
 
-Turn Memcon into a **Model Context Protocol** backend for Claude. Once
-connected, Claude can:
+Wire memcon into Claude over the **Model Context Protocol**. Once connected,
+Claude can:
 
-- **Auto-query** Memcon before answering — pulls only the chunks relevant to
-  the question (not the whole memory).
-- **Auto-write** debug sessions, decisions, and experiments after solving a
-  problem — so the next session (yours or someone else's) finds it.
+- **Pull the matching notes** before answering — only your project's notes
+  relevant to the question, not the whole on-disk record.
+- **Write a fix back** as a typed note after solving a problem — so the next
+  session (yours or someone else's) finds it.
 
-No copy-paste. No manual note-taking. The vault grows itself while you work.
+No copy-paste. When you confirm a fix, Claude writes it back as a typed note
+(advisory — it ships in the MCP instructions, a model may not always comply).
 
 ---
 
@@ -16,8 +17,8 @@ No copy-paste. No manual note-taking. The vault grows itself while you work.
 
 | Tool | What it does |
 |---|---|
-| `memcon_query(query, top_k=5, subsystem=None)` | Semantic search — returns top-K relevant chunks. The hashmap lookup. |
-| `memcon_ask(question, top_k=5, subsystem=None)` | Self-contained answer using Memcon's local LLM. Prefer `memcon_query` if the calling LLM (you) wants raw context. |
+| `memcon_query(query, top_k=5, subsystem=None)` | Semantic search — returns top-K relevant chunks. |
+| `memcon_ask(question, top_k=5, subsystem=None)` | Self-contained answer using Memcon's local LLM. |
 | `memcon_write_debug(title, symptom, cause, fix, status, subsystem, tags)` | Save a debugging session. |
 | `memcon_write_decision(title, decision, reasoning, subsystem, tags)` | Save an engineering decision. |
 | `memcon_write_experiment(title, hypothesis, result, conclusion, subsystem, tags)` | Save an experiment. |
@@ -37,17 +38,16 @@ Claude calls memcon_query("requests failing under burst load")
         ↓
 Memcon returns top-5 chunks from past debug notes
         ↓
-Claude answers grounded in YOUR project history (not hallucinated)
+Claude answers from the matching notes in your project, not from scratch
         ↓
 After you confirm the fix:
 Claude calls memcon_write_debug(title, symptom, cause, fix, subsystem="cache")
         ↓
-New note saved into the Obsidian vault → re-ingested → searchable next session
+New typed note written to your vault (plain markdown you own) → re-ingested → searchable next session
 ```
 
-The "hashmap" framing: each `memcon_query` call is a key lookup against
-semantic-similarity buckets. Only the matching chunks come back — not the
-entire vault. Cheap, fast, and keyed by meaning rather than exact string.
+Matched by meaning AND by exact filename, symbol, or error string. Only the
+matching notes come back — not the entire vault.
 
 ---
 
@@ -139,18 +139,11 @@ This opens a local web UI where you can list tools and call them by hand.
 
 ---
 
-## Suggested usage prompt for Claude
+## The recall/capture reflex
 
-Paste this into Claude's system prompt or memory once Memcon is wired up:
-
-> You have access to the `memcon_*` MCP tools, which connect to a local
-> project-memory vector store. Before answering any project-specific
-> question, call `memcon_query` with the user's symptoms/keywords and use
-> the returned chunks as authoritative context. After solving a problem,
-> call `memcon_write_debug` (or `_decision` / `_experiment`) so the
-> resolution persists. At the end of a working session, call
-> `memcon_session_summary`. Do not invent project details that are not in
-> the returned chunks.
+The recall/capture reflex ships in the server's MCP instructions
+(`MEMCON_INSTRUCTIONS` in `server.py`) — no system prompt to paste. It's
+advisory; a model may not always comply.
 
 ---
 
