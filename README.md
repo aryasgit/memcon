@@ -229,10 +229,20 @@ Add the same block to `~/.cursor/mcp.json`. Restart Cursor.
 Add the same block to `~/.claude/settings.json` (or a project-level
 `.claude/settings.json`).
 
-### Reliable auto-triggering
+### Auto-triggering — and how reliable it actually is
 
-Claude has to *decide* to call the tools. To make that reflex automatic,
-paste this into Claude's project memory / system prompt:
+Claude *decides* when to call tools, so memcon's recall/write reflex isn't
+magic — it has to be prompted. **memcon now ships that prompt itself:** the MCP
+server sends the client an `instructions` block on connect ("before answering
+about this project, call `memcon_query` first; after the user solves something,
+call `memcon_capture`"), so a fresh install gets the reflex with **nothing to
+paste**.
+
+Honest caveat: server instructions are *advisory*. Most of the time Claude
+follows them, but a client/model can still occasionally answer without recalling
+first, or ask you for fields instead of just saving. If you want the strongest
+guarantee, paste the block below into Claude's project memory / system prompt —
+it reinforces the server instructions:
 
 > You have access to the `memcon_*` MCP tools. Before answering any question
 > about this project, call `memcon_query` with the user's symptoms/keywords
@@ -580,9 +590,11 @@ Most common causes:
 
 ### "save this" / "save debug session" — Claude asks for more details instead of saving
 
-By default Claude Desktop doesn't know that `memcon_capture` is the right
-tool for loose, short save commands. Add the auto-triggering prompt above
-to Claude's project memory. After that, any of these phrases will route
+memcon's server instructions tell Claude to route loose "save/log/remember
+this" commands straight to `memcon_capture` — which never asks you to spell out
+title/symptom/cause/fix; it just saves the raw text. If Claude still asks for
+details instead of saving, reinforce it by pasting the auto-triggering block
+above into Claude's project memory. Any of these phrases should then route
 through `memcon_capture` — Claude structures the note (or, with the optional
 local LLM, memcon auto-extracts the fields):
 - "save this" / "save it" / "log this"

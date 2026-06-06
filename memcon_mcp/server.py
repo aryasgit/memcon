@@ -42,7 +42,23 @@ import logging as _logging
 for _n in ("httpx", "httpcore", "qdrant_client", "sentence_transformers", "urllib3"):
     _logging.getLogger(_n).setLevel(_logging.WARNING)
 
-mcp = FastMCP("memcon")
+# Server-level MCP instructions: shipped to the client in the `initialize`
+# handshake and surfaced to the model as soon as it connects. This is what makes
+# the "query before answering / capture after solving" reflex automatic WITHOUT
+# the user pasting a system prompt. It's advisory (a client/model may not always
+# comply), so it raises reliability a lot but isn't a 100% guarantee — see README.
+MEMCON_INSTRUCTIONS = (
+    "memcon is this project's persistent memory — local markdown notes you own, plus search. "
+    "Use it reflexively, without being asked:\n"
+    "1. BEFORE answering anything about this project — or the moment the user hits a "
+    "bug/error/regression, or asks 'have we seen this?' — call memcon_recall (debugging) or "
+    "memcon_query (general) FIRST, and ground your answer in the returned notes instead of guessing.\n"
+    "2. AFTER the user solves a bug, makes a decision, or says 'save/log/remember this' — call "
+    "memcon_capture(text=...) with a short summary of the relevant conversation. memcon saves the raw "
+    "text instantly and structures it itself; NEVER ask the user to hand-fill title/symptom/cause/fix. "
+    "Use the memcon_write_* tools only when the user already gives you pre-structured fields."
+)
+mcp = FastMCP("memcon", instructions=MEMCON_INSTRUCTIONS)
 
 # Load .env from the REPO dir explicitly. Claude Desktop spawns this server with
 # cwd=/ (the MCP registration has no cwd), so a bare load_dotenv() finds nothing;
@@ -540,12 +556,12 @@ def memcon_digest(since_days: int = 7) -> dict:
 @mcp.tool()
 def memcon_capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     """
-    DEFAULT WRITE TOOL — use this for ANY user instruction of the form
-    "save this", "log this", "remember this", "save the debugging session",
-    "log my decision", etc. Do NOT ask the user to spell out title/symptom/
-    cause/fix yourself; instead, summarise the relevant span of the current
-    conversation into `text` (the richer, the better — paragraphs, code,
-    error logs, conversation excerpts) and call this tool.
+    DEFAULT SAVE TOOL — call this for ANY "save / log / remember this"
+    request (incl. "save the debugging session", "log my decision", "session
+    summary"). NEVER ask the user to hand-fill title/symptom/cause/fix — just
+    summarise the relevant span of the current conversation into `text` (the
+    richer, the better — paragraphs, code, error logs, conversation excerpts)
+    and call this tool.
 
     THIS CALL RETURNS INSTANTLY. It writes a note immediately with your raw
     text preserved (already searchable), then runs the multi-pass local-LLM

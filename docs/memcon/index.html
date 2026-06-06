@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Memcon — Memory for Claude.</title>
-<meta name="description" content="Local, persistent project memory that plugs straight into Claude. Auto-query before answering, auto-write after solving. Zero cloud.">
+<meta name="description" content="Local project memory for Claude. Recalls the handful of relevant notes before answering, then writes solved bugs back as plain Obsidian files. 100% local, no cloud.">
 <meta property="og:title" content="Memcon — Memory for Claude.">
-<meta property="og:description" content="Local, persistent project memory that plugs straight into Claude. Auto-query before answering, auto-write after solving. Zero cloud.">
+<meta property="og:description" content="Local project memory for Claude. Recalls the handful of relevant notes before answering, then writes solved bugs back as plain Obsidian files. 100% local, no cloud.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Inter+Tight:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -727,7 +727,7 @@
       </div>
       <div class="hero-aux">
         <span class="label">What it does</span>
-        <span><strong>Plugs into Claude over MCP.</strong> Reads your vault before answering. Writes every solved bug back into it. No cloud.</span>
+        <span><strong>Plugs into Claude over MCP.</strong> Pulls the ~5 relevant notes before answering. Writes a solved bug back when you confirm the fix. 100% local.</span>
         <span class="label" style="margin-top:.5rem">Runs on</span>
         <span><strong>macOS · Linux · WSL · Windows.</strong> Docker + Python. Local LLM optional.</span>
       </div>
@@ -796,7 +796,7 @@
         <div class="num">01</div>
         <div class="cap">The Loop</div>
       </div>
-      <h2 class="tight">Claude asks. Memcon answers.<br><span class="dim">It writes the result back.</span> <span class="lite">Forever.</span></h2>
+      <h2 class="tight">Claude asks. Memcon returns the relevant notes.<br><span class="dim">Claude writes the result back.</span> <span class="lite">As plain markdown.</span></h2>
     </div>
 
     <div class="loop reveal">
@@ -874,7 +874,7 @@
     </div>
     <div class="stats reveal">
       <div class="stat">
-        <div class="big">12<sup>tools</sup></div>
+        <div class="big">19<sup>tools</sup></div>
         <div class="lab"><strong>MCP-native.</strong> Claude decides when to query and when to write — both are tool calls.</div>
       </div>
       <div class="stat">
