@@ -1,111 +1,159 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 600" font-family="'Inter Tight','Segoe UI',system-ui,sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 980" font-family="'Inter','Segoe UI',system-ui,sans-serif">
   <defs>
-    <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto-start-reverse">
-      <path d="M0,0 L9,4.5 L0,9 z" fill="#7a7a7a"/>
-    </marker>
-    <marker id="ahg" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto-start-reverse">
-      <path d="M0,0 L9,4.5 L0,9 z" fill="#3dd07a"/>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7.5" refY="5" orient="auto-start-reverse">
+      <path d="M0,1 L8,5 L0,9 z" fill="#94a3b8"/>
     </marker>
   </defs>
 
-  <!-- backdrop -->
-  <rect x="0" y="0" width="1160" height="600" rx="16" fill="#0a0a0a"/>
+  <rect x="0" y="0" width="1480" height="980" fill="#ffffff"/>
 
   <!-- title -->
-  <text x="40" y="48" fill="#f4f4f4" font-size="23" font-weight="600">How memcon works</text>
-  <text x="40" y="74" fill="#8a8a8a" font-size="13.5">Claude pulls the few notes that match before it answers — then writes the fix back. Every box runs on your machine.</text>
+  <text x="48" y="50" fill="#0f172a" font-size="25" font-weight="700">How memcon works</text>
+  <text x="48" y="76" fill="#64748b" font-size="14">Claude pulls the few notes that match before it answers — then writes the fix back. Everything runs on your machine.</text>
 
-  <!-- local boundary -->
-  <rect x="36" y="100" width="1088" height="450" rx="16" fill="none" stroke="#2e6b46" stroke-width="1.3" stroke-dasharray="7 6"/>
-  <rect x="52" y="91" width="232" height="18" fill="#0a0a0a"/>
-  <circle cx="64" cy="100" r="4" fill="#3dd07a"/>
-  <text x="76" y="104.5" fill="#3dd07a" font-size="11.5" font-weight="600" letter-spacing="1.5">YOUR MACHINE · 100% LOCAL</text>
+  <!-- ============ SWIMLANES ============ -->
+  <!-- You -->
+  <rect x="48" y="98" width="316" height="824" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="48" y="98" width="316" height="44" rx="12" fill="#eef2f7"/>
+  <rect x="48" y="120" width="316" height="22" fill="#eef2f7"/>
+  <text x="206" y="126" fill="#0f172a" font-size="15" font-weight="600" text-anchor="middle">You</text>
+  <!-- Claude -->
+  <rect x="380" y="98" width="360" height="824" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="380" y="98" width="360" height="44" rx="12" fill="#eef2f7"/>
+  <rect x="380" y="120" width="360" height="22" fill="#eef2f7"/>
+  <text x="560" y="126" fill="#0f172a" font-size="15" font-weight="600" text-anchor="middle">Claude · over MCP</text>
+  <!-- memcon -->
+  <rect x="756" y="98" width="440" height="824" rx="12" fill="#f4fbf8" stroke="#cdeede"/>
+  <rect x="756" y="98" width="440" height="44" rx="12" fill="#e6f6ee"/>
+  <rect x="756" y="120" width="440" height="22" fill="#e6f6ee"/>
+  <text x="976" y="126" fill="#065f46" font-size="15" font-weight="600" text-anchor="middle">memcon · 100% local</text>
 
-  <!-- ===================== READ ROW ===================== -->
-  <text x="56" y="138" fill="#5a5a5a" font-size="11" font-weight="600" letter-spacing="2">RECALL  ▸  BEFORE CLAUDE ANSWERS</text>
+  <!-- ============ CONNECTORS (drawn first, under nodes) ============ -->
+  <g fill="none" stroke="#94a3b8" stroke-width="1.7">
+    <!-- start -> ask -->
+    <path d="M206,172 L206,198" marker-end="url(#arr)"/>
+    <!-- ask -> recall -->
+    <path d="M318,224 L450,224" marker-end="url(#arr)"/>
+    <!-- recall -> fork (down,right,down) -->
+    <path d="M560,252 L560,278 L976,278 L976,300" marker-end="url(#arr)"/>
+    <!-- fork -> semantic / entity -->
+    <path d="M872,314 L872,348" marker-end="url(#arr)"/>
+    <path d="M1080,314 L1080,348" marker-end="url(#arr)"/>
+    <!-- semantic / entity -> join -->
+    <path d="M872,408 L872,440" marker-end="url(#arr)"/>
+    <path d="M1080,408 L1080,440" marker-end="url(#arr)"/>
+    <!-- join -> rank -->
+    <path d="M976,456 L976,494" marker-end="url(#arr)"/>
+    <!-- rank -> grounded answer (left) -->
+    <path d="M858,524 L672,524" marker-end="url(#arr)"/>
+    <!-- answer -> confirm (down,left,down) -->
+    <path d="M560,554 L560,584 L206,584 L206,600" marker-end="url(#arr)"/>
+    <!-- confirm -> capture (down,right) -->
+    <path d="M206,656 L206,690 L450,690" marker-end="url(#arr)"/>
+    <!-- capture -> write -->
+    <path d="M670,690 L852,690" marker-end="url(#arr)"/>
+    <!-- write -> vault store -->
+    <path d="M976,720 L976,760" marker-end="url(#arr)"/>
+    <!-- vault -> end -->
+    <path d="M976,832 L976,866" marker-end="url(#arr)"/>
+  </g>
 
-  <!-- N1 You -->
-  <rect x="56" y="150" width="150" height="78" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="131" y="186" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">You</text>
-  <text x="131" y="206" fill="#8a8a8a" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">ask Claude normally</text>
+  <!-- edge labels -->
+  <text x="762" y="508" fill="#64748b" font-size="11.5" text-anchor="middle">answers from the matches</text>
+  <text x="320" y="578" fill="#64748b" font-size="11.5" text-anchor="middle">you apply it</text>
+  <text x="1006" y="746" fill="#64748b" font-size="11.5" text-anchor="start">written + re-indexed</text>
 
-  <!-- N2 Claude -->
-  <rect x="240" y="150" width="158" height="78" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="319" y="186" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">Claude · over MCP</text>
-  <text x="319" y="206" fill="#66d9ef" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">memcon_recall()</text>
+  <!-- ============ NODES ============ -->
+  <!-- N1 start -->
+  <circle cx="206" cy="158" r="14" fill="#475569"/>
+  <text x="232" y="162" fill="#64748b" font-size="11.5">start</text>
 
-  <!-- N3 Retrieve (hybrid) -->
-  <rect x="432" y="140" width="232" height="98" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="548" y="166" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">Retrieve · hybrid</text>
-  <circle cx="452" cy="188" r="4" fill="#ae81ff"/>
-  <text x="462" y="192" fill="#cfcfcf" font-size="11" font-family="'JetBrains Mono',monospace">semantic — Qdrant vectors</text>
-  <circle cx="452" cy="212" r="4" fill="#66d9ef"/>
-  <text x="462" y="216" fill="#cfcfcf" font-size="11" font-family="'JetBrains Mono',monospace">exact entity — SQLite index</text>
+  <!-- N2 ask (You) -->
+  <rect x="94" y="198" width="224" height="52" rx="26" fill="#4f46e5"/>
+  <text x="206" y="222" fill="#ffffff" font-size="14.5" font-weight="600" text-anchor="middle">Ask Claude</text>
+  <text x="206" y="240" fill="#c7d2fe" font-size="11" text-anchor="middle">a bug, an error, "have we seen this?"</text>
 
-  <!-- N4 Rank -->
-  <rect x="700" y="150" width="150" height="78" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="775" y="180" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">Rank</text>
-  <text x="775" y="199" fill="#8a8a8a" font-size="10.5" text-anchor="middle" font-family="'JetBrains Mono',monospace">recency + outcome</text>
-  <text x="775" y="215" fill="#3dd07a" font-size="10.5" text-anchor="middle" font-family="'JetBrains Mono',monospace">resolved / open / failed</text>
+  <!-- N3 recall (Claude) -->
+  <rect x="450" y="198" width="220" height="52" rx="26" fill="#4f46e5"/>
+  <text x="560" y="222" fill="#ffffff" font-size="14.5" font-weight="600" text-anchor="middle">Recall</text>
+  <text x="560" y="240" fill="#c7d2fe" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">memcon_recall()</text>
 
-  <!-- N5 Answer -->
-  <rect x="886" y="150" width="178" height="78" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="975" y="180" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">Grounded answer</text>
-  <text x="975" y="200" fill="#8a8a8a" font-size="10.5" text-anchor="middle" font-family="'JetBrains Mono',monospace">from your notes,</text>
-  <text x="975" y="215" fill="#8a8a8a" font-size="10.5" text-anchor="middle" font-family="'JetBrains Mono',monospace">with sources</text>
+  <!-- N4 fork bar -->
+  <rect x="851" y="300" width="250" height="14" rx="3" fill="#334155"/>
+  <text x="1110" y="311" fill="#94a3b8" font-size="11">fork — run both</text>
 
-  <!-- read arrows -->
-  <line x1="206" y1="189" x2="238" y2="189" stroke="#7a7a7a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <line x1="398" y1="189" x2="430" y2="189" stroke="#7a7a7a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <line x1="664" y1="189" x2="698" y2="189" stroke="#7a7a7a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <line x1="850" y1="189" x2="884" y2="189" stroke="#7a7a7a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <!-- N5a semantic -->
+  <rect x="782" y="348" width="180" height="60" rx="14" fill="#0d9488"/>
+  <text x="872" y="372" fill="#ffffff" font-size="14" font-weight="600" text-anchor="middle">Semantic</text>
+  <text x="872" y="391" fill="#ccfbf1" font-size="11" text-anchor="middle">Qdrant vectors — by meaning</text>
+  <!-- N5b exact-entity -->
+  <rect x="990" y="348" width="180" height="60" rx="14" fill="#0d9488"/>
+  <text x="1080" y="372" fill="#ffffff" font-size="14" font-weight="600" text-anchor="middle">Exact-entity</text>
+  <text x="1080" y="391" fill="#ccfbf1" font-size="11" text-anchor="middle">SQLite — file / symbol / error</text>
 
-  <!-- ===================== HUB ===================== -->
-  <rect x="432" y="300" width="418" height="80" rx="10" fill="#0f140f" stroke="#2e6b46" stroke-width="1.2"/>
-  <text x="548" y="330" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">vault/ — plain markdown you own</text>
-  <text x="548" y="351" fill="#8a8a8a" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">grep it · edit it · walk away with it</text>
-  <line x1="690" y1="318" x2="690" y2="362" stroke="#2e6b46" stroke-width="1"/>
-  <text x="775" y="334" fill="#cfcfcf" font-size="12.5" text-anchor="middle" font-weight="600">index</text>
-  <text x="775" y="353" fill="#8a8a8a" font-size="10.5" text-anchor="middle" font-family="'JetBrains Mono',monospace">Qdrant + SQLite</text>
-  <text x="775" y="368" fill="#5a5a5a" font-size="9.5" text-anchor="middle" font-family="'JetBrains Mono',monospace">rebuildable cache</text>
+  <!-- N6 join bar -->
+  <rect x="851" y="440" width="250" height="14" rx="3" fill="#334155"/>
+  <text x="1110" y="451" fill="#94a3b8" font-size="11">join — wait for both</text>
 
-  <!-- hub <-> retrieve (read) -->
-  <line x1="548" y1="300" x2="548" y2="240" stroke="#7a7a7a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <rect x="556" y="262" width="120" height="16" fill="#0a0a0a"/>
-  <text x="560" y="274" fill="#8a8a8a" font-size="11" font-family="'JetBrains Mono',monospace">reads the matches</text>
+  <!-- N7 rank (memcon) -->
+  <rect x="858" y="494" width="236" height="60" rx="14" fill="#0d9488"/>
+  <text x="976" y="518" fill="#ffffff" font-size="14.5" font-weight="600" text-anchor="middle">Rank</text>
+  <text x="976" y="537" fill="#ccfbf1" font-size="11" text-anchor="middle">recency + outcome (resolved/open/failed)</text>
 
-  <!-- ===================== WRITE ROW ===================== -->
-  <text x="432" y="436" fill="#5a5a5a" font-size="11" font-weight="600" letter-spacing="2">CAPTURE  ▸  AFTER YOU CONFIRM THE FIX</text>
+  <!-- N8 grounded answer (Claude) -->
+  <rect x="452" y="494" width="220" height="60" rx="14" fill="#4f46e5"/>
+  <text x="562" y="518" fill="#ffffff" font-size="14.5" font-weight="600" text-anchor="middle">Grounded answer</text>
+  <text x="562" y="537" fill="#c7d2fe" font-size="11" text-anchor="middle">from your notes, with sources</text>
 
-  <!-- W3 Typed note -->
-  <rect x="432" y="450" width="232" height="78" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="548" y="480" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">Typed note</text>
-  <text x="548" y="500" fill="#e6db74" font-size="10.5" text-anchor="middle" font-family="'JetBrains Mono',monospace">debugging/redis-pool.md</text>
-  <text x="548" y="515" fill="#8a8a8a" font-size="10" text-anchor="middle" font-family="'JetBrains Mono',monospace">symptom · cause · fix · status</text>
+  <!-- N9 confirm (You) -->
+  <rect x="94" y="600" width="224" height="56" rx="14" fill="#4f46e5"/>
+  <text x="206" y="624" fill="#ffffff" font-size="14.5" font-weight="600" text-anchor="middle">Confirm the fix</text>
+  <text x="206" y="642" fill="#c7d2fe" font-size="11" text-anchor="middle">"that worked"</text>
 
-  <!-- W2 Claude writes -->
-  <rect x="700" y="450" width="150" height="78" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="775" y="486" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">Claude writes it</text>
-  <text x="775" y="506" fill="#66d9ef" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">memcon_capture()</text>
+  <!-- N10 capture (Claude) -->
+  <rect x="450" y="664" width="220" height="52" rx="26" fill="#4f46e5"/>
+  <text x="560" y="688" fill="#ffffff" font-size="14.5" font-weight="600" text-anchor="middle">Capture</text>
+  <text x="560" y="706" fill="#c7d2fe" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">memcon_capture()</text>
 
-  <!-- W1 You confirm -->
-  <rect x="886" y="450" width="178" height="78" rx="10" fill="#131313" stroke="#2b2b2b"/>
-  <text x="975" y="486" fill="#f4f4f4" font-size="15" font-weight="600" text-anchor="middle">You confirm the fix</text>
-  <text x="975" y="506" fill="#8a8a8a" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">“that worked”</text>
+  <!-- N11 write (memcon) -->
+  <rect x="852" y="662" width="248" height="56" rx="14" fill="#0d9488"/>
+  <text x="976" y="686" fill="#ffffff" font-size="14.5" font-weight="600" text-anchor="middle">Write typed note</text>
+  <text x="976" y="704" fill="#ccfbf1" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">debugging/redis-pool.md</text>
 
-  <!-- write arrows (right to left) -->
-  <line x1="886" y1="489" x2="852" y2="489" stroke="#7a7a7a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <line x1="700" y1="489" x2="666" y2="489" stroke="#7a7a7a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <!-- N12 vault data store (memcon) -->
+  <path d="M851,772 q0,-12 12,-12 h60 l10,10 h146 q12,0 12,12 v48 q0,12 -12,12 h-244 q-12,0 -12,-12 z"
+        fill="#ecfdf5" stroke="#10b981" stroke-width="1.6"/>
+  <text x="976" y="794" fill="#065f46" font-size="14.5" font-weight="700" text-anchor="middle">vault/ — markdown you own</text>
+  <text x="976" y="812" fill="#059669" font-size="11" text-anchor="middle">+ index (Qdrant · SQLite) · grep it, edit it, walk away</text>
 
-  <!-- typed note -> hub (write up) -->
-  <line x1="548" y1="450" x2="548" y2="382" stroke="#3dd07a" stroke-width="1.5" marker-end="url(#ahg)"/>
-  <rect x="556" y="404" width="240" height="16" fill="#0a0a0a"/>
-  <text x="560" y="416" fill="#3dd07a" font-size="11" font-family="'JetBrains Mono',monospace">written instantly · watcher re-indexes</text>
+  <!-- N13 end -->
+  <circle cx="976" cy="882" r="15" fill="#ffffff" stroke="#475569" stroke-width="3"/>
+  <circle cx="976" cy="882" r="7" fill="#475569"/>
+  <text x="1002" y="886" fill="#64748b" font-size="11.5">end</text>
 
-  <!-- loop: answer -> you confirm -->
-  <path d="M1064,189 C 1112,280 1112,400 1064,489" fill="none" stroke="#3dd07a" stroke-width="1.5" marker-end="url(#ahg)"/>
-  <text x="1108" y="343" fill="#3dd07a" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace" transform="rotate(90 1108 343)">you apply the fix</text>
+  <!-- ============ LEGEND ============ -->
+  <rect x="1232" y="300" width="216" height="332" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="1256" y="332" fill="#0f172a" font-size="13" font-weight="700" letter-spacing="1">LEGEND</text>
 
-  <!-- footer note -->
-  <text x="40" y="582" fill="#5a5a5a" font-size="11.5">Next session, the new note is already in the vault — so the fix shows up with the bug. No cloud, no API keys, no copy-paste.</text>
+  <circle cx="1268" cy="372" r="11" fill="#475569"/>
+  <text x="1292" y="376" fill="#334155" font-size="13">Start</text>
+
+  <rect x="1256" y="404" width="26" height="18" rx="9" fill="#4f46e5"/>
+  <text x="1292" y="418" fill="#334155" font-size="13">Action — You / Claude</text>
+
+  <rect x="1256" y="446" width="26" height="18" rx="6" fill="#0d9488"/>
+  <text x="1292" y="460" fill="#334155" font-size="13">memcon step</text>
+
+  <rect x="1256" y="490" width="26" height="9" rx="2" fill="#334155"/>
+  <text x="1292" y="500" fill="#334155" font-size="13">Fork / join</text>
+
+  <rect x="1256" y="528" width="26" height="20" rx="4" fill="#ecfdf5" stroke="#10b981" stroke-width="1.4"/>
+  <text x="1292" y="542" fill="#334155" font-size="13">Data store (vault)</text>
+
+  <circle cx="1269" cy="582" r="10" fill="#ffffff" stroke="#475569" stroke-width="2.6"/>
+  <circle cx="1269" cy="582" r="4.5" fill="#475569"/>
+  <text x="1292" y="586" fill="#334155" font-size="13">End</text>
+
+  <!-- footer -->
+  <text x="48" y="958" fill="#64748b" font-size="13">Next session, the note is already in the vault — so the fix shows up with the bug. No cloud, no API keys, no copy-paste.</text>
 </svg>
