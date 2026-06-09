@@ -140,7 +140,7 @@ ones (mem0, Letta). The edge here is the *combination* — and every piece has a
 test you can run (`pytest tests/test_differentiators.py`):
 
 - **Engineering-typed notes that write themselves back** — `debug` / `decision` / `experiment` / `breakthrough` with real fields, not one undifferentiated blob. When you confirm a fix, Claude captures the solved bug back as a typed note (advisory, via the MCP server's instructions). Reciprocal `## Related` links are written *back* into the neighbor, so recalling a bug surfaces the decision it forced — both directions, on disk.
-- **Recall by meaning, exact match, *and* recency** — a SQLite entity index sits next to the vectors, so a literal `jwt.ts` or `EADDRINUSE` surfaces its note even when the wording differs (works in lean mode — entities come from note content on every ingest, no LLM). `memcon_recall` then lifts your most recent matching attempt and labels each one resolved / open / failed: a past fix answers you, a past failure warns you.
+- **Recall along three axes — semantic, temporal, episodic.** *Semantic*: matches what you mean (vectors) **and** the exact filename, symbol, or error string — a SQLite entity index next to the vectors, so a literal `jwt.ts` or `EADDRINUSE` is never missed (works in lean mode, no LLM). *Temporal*: `memcon_recall` weights recency, so your most recent attempt floats to the top. *Episodic*: every note is a debugging episode — symptom → cause → fix → **outcome** (resolved / open / failed), so a past failure warns you and a past fix answers you.
 - **100% local, files you own** — plain markdown + Qdrant + SQLite on your machine. No cloud.
 
 See **[HOW-IT-WORKS.md](HOW-IT-WORKS.md)** for the per-claim → code → test mapping.
