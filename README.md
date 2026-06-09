@@ -22,6 +22,10 @@
 
 </div>
 
+**▶ Watch it work** — Claude hits a bug, recalls the fix from a past session, and answers from it:
+
+https://github.com/user-attachments/assets/ef2d4d00-20ca-4d7e-9ac8-4ca31c3ecbbe
+
 <p align="center">
   <img src="docs/assets/pipeline.svg" alt="How memcon works — Claude recalls the matching notes before answering, then writes the fix back, all on your machine" width="900">
 </p>
@@ -140,6 +144,22 @@ test you can run (`pytest tests/test_differentiators.py`):
 - **100% local, files you own** — plain markdown + Qdrant + SQLite on your machine. No cloud.
 
 See **[HOW-IT-WORKS.md](HOW-IT-WORKS.md)** for the per-claim → code → test mapping.
+
+---
+
+## See it in action
+
+**Install it** — download, run, and the first recall, end to end:
+
+https://github.com/user-attachments/assets/c4d2429f-13b2-40a9-87a0-991021725c43
+
+**In Cursor / VS Code** — add the extension and ask your project inline:
+
+https://github.com/user-attachments/assets/f4adcbd3-de2e-4f78-8058-22224343296c
+
+**The local dashboard** — search, write, and browse your vault in the browser:
+
+https://github.com/user-attachments/assets/ce57b303-0c86-4ce8-b85e-56c7145068f0
 
 ---
 
