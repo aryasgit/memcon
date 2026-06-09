@@ -41,8 +41,12 @@ RELEVANCE_FLOOR = 0.30         # min semantic similarity to count as "related".
 
 def recency_factor(age_days: float, half_life: float = RECENCY_HALF_LIFE_DAYS) -> float:
     """1.0 for a note written today, 0.5 at `half_life` days, → 0 as it ages.
-    Exponential decay — smooth, no cliffs."""
-    if age_days is None or age_days <= 0:
+    Exponential decay — smooth, no cliffs. Unknown age (None) gets NO boost (0.0):
+    an unresolved/phantom candidate must never be lifted as if it were written
+    today — that conflation was the 'fresh today' phantom-recall bug."""
+    if age_days is None:
+        return 0.0
+    if age_days <= 0:
         return 1.0
     return 0.5 ** (age_days / half_life)
 
@@ -211,7 +215,17 @@ def recall(problem: str, k: int = 5) -> dict:
 
     candidates = []
     for dn, c in best.items():
-        c.update(_note_meta(dn))
+        meta = _note_meta(dn)
+        if not meta:
+            # The index still references a note that's no longer on disk (deleted,
+            # renamed, or now-excluded) and its rows haven't been pruned yet. Do
+            # NOT surface a confident phantom: an entity hit enters at similarity
+            # 0.9, and with no file _note_meta yields no age → it would otherwise
+            # rank as a fresh "today" result. Skip it; the stale rows are cleaned
+            # on the next reconcile. This makes recall self-healing against any
+            # stale index entry (entity OR vector), not just pruned ones.
+            continue
+        c.update(meta)
         candidates.append(c)
 
     # Keep only genuinely-related notes. Below the floor, drop it — recall stays

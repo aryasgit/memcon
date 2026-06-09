@@ -28,6 +28,21 @@ import os, sys, re, threading
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+# The on-disk note keeps the FULL raw text — it's the source of truth, and local
+# markdown is cheap. Cap only at a very generous ceiling, and if we ever hit it
+# leave a VISIBLE marker instead of silently dropping the tail. (The old hard
+# 16k cut lost everything past ~3k words of a pasted transcript with no warning —
+# the exact use the memcon_capture docstring invites.)
+_RAW_CAP = 200_000
+
+def _raw_for_disk(text: str) -> str:
+    if not text or len(text) <= _RAW_CAP:
+        return text or ""
+    return text[:_RAW_CAP] + (
+        f"\n\n[... truncated {len(text) - _RAW_CAP:,} chars — original exceeded the "
+        f"{_RAW_CAP:,}-char note cap ]"
+    )
 from config import cfg
 from memory.templates import ALL_KINDS
 
@@ -131,7 +146,7 @@ def _enrich_in_background(path: str, text: str, kind: str, title: str,
         # truth — structure is derived from it. FORCE it (the extractor can
         # return an empty context_raw, which must NEVER be allowed to wipe the
         # original). setdefault was the data-loss bug.
-        fields["context_raw"] = text[:16000]
+        fields["context_raw"] = _raw_for_disk(text)
 
         # GUARD: if the extraction produced essentially nothing (model hiccup,
         # empty/unparseable JSON), do NOT overwrite — the provisional note
@@ -195,7 +210,7 @@ def capture(text: str, hint: str = "auto", run_critique: bool = False) -> dict:
     content = render(
         kind=kind,
         title=title,
-        fields={"tldr": title, "context_raw": text[:16000]},
+        fields={"tldr": title, "context_raw": _raw_for_disk(text)},
         note_id=note_id,
         subsystem="unknown",
     )

@@ -50,7 +50,10 @@ def ingest_file(filepath: str, force: bool = False) -> int:
     try:
         mtime = os.path.getmtime(filepath)
         stem = Path(filepath).stem
-    except OSError:
+    except OSError as e:
+        # A genuine stat failure must not look identical to "nothing to do" (0).
+        # Log it so a note that silently never indexes is at least discoverable.
+        print(f"[ingest] cannot stat {filepath}, skipping: {e}", file=sys.stderr)
         return 0
     if not force and _manifest_read().get(stem) == mtime:
         return 0
@@ -183,8 +186,13 @@ def _manifest_touch(stem: str, mtime: float) -> None:
         m[stem] = mtime
         try:
             _atomic_write_text(_manifest_path(), json.dumps(m))
-        except Exception:
-            pass
+        except Exception as e:
+            # Degrade, but visibly: a lost manifest update means this file either
+            # never re-indexes or gets re-ingested on every sync (the write-
+            # amplification loop the manifest exists to prevent) — invisible
+            # without this line.
+            print(f"[ingest] manifest write failed — index may re-ingest unchanged "
+                  f"files until this clears: {e}", file=sys.stderr)
 
 
 def _reconcile() -> dict:
@@ -222,15 +230,21 @@ def _reconcile() -> dict:
     removed = 0
     for doc in list(manifest.keys()):
         if doc not in current:                    # note deleted from disk → prune
-            delete_by_doc(doc)
-            del manifest[doc]
+            delete_by_doc(doc)                    # vector chunks
+            try:                                  # exact-entity rows — without this,
+                from memory import entity_index   # a deleted note's filename/symbol/
+                entity_index.clear_doc(doc)       # error entries linger forever and
+            except Exception as e:                # recall surfaces a confident
+                print(f"[sync] entity prune failed for {doc}: {e}", file=sys.stderr)
+            del manifest[doc]                     # phantom hit for content that's gone.
             removed += 1
 
     with _MANIFEST_LOCK:
         try:
             _atomic_write_text(mpath, json.dumps(manifest))
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[sync] manifest write failed — next sync may re-scan unchanged "
+                  f"files: {e}", file=sys.stderr)
     return {"synced": synced, "removed": removed}
 
 

@@ -12,6 +12,7 @@
 **Claude already knows what you fixed last time.**
 **A 100%-local MCP server that keeps your project's bugs, decisions, and dead ends on disk — so Claude pulls the few that match before it answers.**
 
+[![CI](https://github.com/aryasgit/memcon/actions/workflows/ci.yml/badge.svg)](https://github.com/aryasgit/memcon/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-000.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-000.svg)](https://python.org)
 [![Local First](https://img.shields.io/badge/runs-100%25%20local-000.svg)]()
@@ -49,9 +50,11 @@ Cursor over MCP) and the loop closes:
   session as a typed markdown note — `debug`, `decision`, `experiment`,
   `breakthrough`. Next time the error shows up, the fix shows up with it.
 
-> **[ demo GIF — `docs/assets/recall-loop.gif` ]** describe a symptom →
-> `memcon_recall` surfaces the old debug note → Claude reads it and re-derives
-> the fix, in one turn.
+> **The one-turn loop:** describe a symptom → `memcon_recall` surfaces the old
+> debug note → Claude reads it and re-derives the fix — in a single turn.
+
+<!-- TODO before Show HN: record docs/assets/recall-loop.gif of this exact loop and embed it here. -->
+
 
 **And the related work travels with the hit.** Each new note self-organizes a
 `## Related` block, and the link is written *back* into the neighbor too — so

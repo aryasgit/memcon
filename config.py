@@ -1,4 +1,5 @@
 import os
+import sys
 import yaml
 from pathlib import Path
 
@@ -59,8 +60,11 @@ def get_config() -> dict:
             try:
                 with open(local_path) as lf:
                     _deep_merge(_config, yaml.safe_load(lf) or {})
-            except Exception:
-                pass
+            except Exception as e:
+                # Visible, not silent: a typo'd per-machine override would otherwise
+                # fall back to the tracked vault path with no hint why.
+                print(f"[config] ignoring malformed memcon.config.local.yaml: {e}",
+                      file=sys.stderr)
 
         # ── vault.path: env override > ~-expand + absolutise relative path
         vault = _config.setdefault('vault', {})
