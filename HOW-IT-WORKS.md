@@ -9,6 +9,10 @@ it and the test that proves it, with honest caveats. Run the proofs yourself
 .venv/bin/python -m pytest tests/ -q                          # full suite (30 tests)
 ```
 
+<p align="center">
+  <img src="docs/assets/pipeline.svg" alt="memcon pipeline overview — recall path and write-back path, all local" width="900">
+</p>
+
 ## 1. The closed write-loop
 Claude recalls relevant notes before answering, and after you confirm a fix it
 writes a typed note back — instantly searchable.

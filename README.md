@@ -21,6 +21,10 @@
 
 </div>
 
+<p align="center">
+  <img src="docs/assets/pipeline.svg" alt="How memcon works — Claude recalls the matching notes before answering, then writes the fix back, all on your machine" width="900">
+</p>
+
 ---
 
 ## What memcon does

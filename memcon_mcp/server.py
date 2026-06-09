@@ -57,7 +57,9 @@ MEMCON_INSTRUCTIONS = (
     "2. AFTER the user solves a bug, makes a decision, or says 'save/log/remember this' — call "
     "memcon_capture(text=...) with a short summary of the relevant conversation. memcon saves the raw "
     "text instantly and structures it itself; NEVER ask the user to hand-fill title/symptom/cause/fix. "
-    "Use the memcon_write_* tools only when the user already gives you pre-structured fields."
+    "Use the memcon_write_* tools only when the user already gives you pre-structured fields.\n"
+    "When unsure whether a question touches earlier work, call memcon_recall anyway — it is fast and "
+    "returns nothing when there is no match, so checking is free."
 )
 mcp = FastMCP("memcon", instructions=MEMCON_INSTRUCTIONS)
 
