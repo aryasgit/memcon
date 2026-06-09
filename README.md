@@ -151,6 +151,8 @@ curl -fsSL https://raw.githubusercontent.com/aryasgit/memcon/main/bootstrap.sh |
 
 Then fully quit and reopen Claude Desktop — memcon is wired in. Windows, Docker-only, manual setup, the REST API, multi-project, and tuning all live under **Beyond the basics** ↓
 
+> **Footprint:** the default lean install pulls **PyTorch** — CPU-only is all memcon needs (it just runs the local embedder) — and downloads a **~90 MB** embedding model on first use. Budget ~1–2 GB of disk; after that nothing leaves your machine. On a CPU-only box you can keep PyTorch small with `pip install torch --index-url https://download.pytorch.org/whl/cpu`.
+
 ---
 
 <details>
